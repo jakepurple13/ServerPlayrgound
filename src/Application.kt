@@ -33,6 +33,8 @@ import io.ktor.routing.get
 import io.ktor.routing.post
 import io.ktor.routing.route
 import io.ktor.routing.routing
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import kotlinx.html.*
 import kotlinx.html.dom.document
 import okhttp3.OkHttpClient
@@ -57,8 +59,19 @@ import kotlin.collections.ArrayList
 
 fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
+object DbSettings {
+    val db by lazy {
+        Database.connect("jdbc:h2:mem:regular;DB_CLOSE_DELAY=-1;", "org.h2.Driver")
+    }
+}
+
 fun Application.module() {
-    val db = Database.connect("jdbc:h2:mem:regular;DB_CLOSE_DELAY=-1;", "org.h2.Driver")
+    val db = DbSettings.db
+
+    GlobalScope.launch {
+        getAllShows(db)
+        //getAllShowsAndEpisodes(db)
+    }
 
     val simpleJwt = SimpleJWT("my-super-secret-for-jwt")
     install(CORS) {
@@ -172,7 +185,6 @@ fun Application.module() {
                 val list = a + c + cm + d + l
                 val sorted = list.sortedBy { it.name }
                 call.respond(mapOf("shows" to synchronized(sorted) { sorted }))*/
-                getAllShows(db)
                 //getAllShowsAndEpisodes(db)
                 call.respond("OK")
             }
@@ -214,7 +226,7 @@ fun Application.module() {
                 }
 
                 val filtered = if (url.isEmpty()) list else list.filter { it.name.contains(url) }
-                val filtered2 = if(source.isNotEmpty()) filtered.filter { it.url.contains(source) } else filtered
+                val filtered2 = if (source.isNotEmpty()) filtered.filter { it.url.contains(source) } else filtered
 
                 call.respond(FreeMarkerContent("index.ftl", mapOf("data" to filtered2.toList()), ""))
             }
@@ -281,68 +293,45 @@ fun Application.module() {
 
 fun getAllShows(db: Database) {
     transaction(db) {
-        if (Shows.exists()) {
-            prettyLog(Shows.selectAll().count())
-        } else {
+        SchemaUtils.create(Shows)
 
-            SchemaUtils.create(Shows)
+        val a = ShowApi(Source.ANIME).showInfoList.toList()
+        val c = ShowApi(Source.CARTOON).showInfoList.toList()
+        val cm = ShowApi(Source.CARTOON_MOVIES).showInfoList.toList()
+        val d = ShowApi(Source.DUBBED).showInfoList.toList()
+        val l = ShowApi(Source.LIVE_ACTION).showInfoList.toList()
+        val list = a + c + cm + d + l
+        val sorted = list.sortedBy { it.name }
 
-            val a = ShowApi(Source.ANIME).showInfoList.toList()
-            val c = ShowApi(Source.CARTOON).showInfoList.toList()
-            val cm = ShowApi(Source.CARTOON_MOVIES).showInfoList.toList()
-            val d = ShowApi(Source.DUBBED).showInfoList.toList()
-            val l = ShowApi(Source.LIVE_ACTION).showInfoList.toList()
-            val list = a + c + cm + d + l
-            val sorted = list.sortedBy { it.name }
-
-            for (i in sorted) {
-                Show.new {
-                    name = i.name
-                    url = i.url
-                }
+        for (i in sorted) {
+            Show.new {
+                name = i.name
+                url = i.url
             }
-
         }
     }
 }
 
 fun getAllShowsAndEpisodes(db: Database) {
     transaction(db) {
-        if (Shows.exists()) {
-            prettyLog(Shows.selectAll().count())
-        } else {
 
-            SchemaUtils.create(Shows, Episodes, EpisodeLists)
+        SchemaUtils.create(Shows, Episodes)
 
-            val a = ShowApi(Source.ANIME).showInfoList.toList()
-            val c = ShowApi(Source.CARTOON).showInfoList.toList()
-            val cm = ShowApi(Source.CARTOON_MOVIES).showInfoList.toList()
-            val d = ShowApi(Source.DUBBED).showInfoList.toList()
-            val l = ShowApi(Source.LIVE_ACTION).showInfoList.toList()
-            val list = a + c + cm + d + l
-            val sorted = list.sortedBy { it.name }
+        val a = ShowApi(Source.ANIME).showInfoList.toList()
+        val c = ShowApi(Source.CARTOON).showInfoList.toList()
+        val cm = ShowApi(Source.CARTOON_MOVIES).showInfoList.toList()
+        val d = ShowApi(Source.DUBBED).showInfoList.toList()
+        val l = ShowApi(Source.LIVE_ACTION).showInfoList.toList()
+        val list = a + c + cm + d + l
+        val sorted = list.sortedBy { it.name }
 
-            for (i in sorted) {
-                val s = Show.new {
-                    name = i.name
-                    url = i.url
-                }
-                val showList = EpisodeApi(i)
-                val e = Episode.new {
-                    name = showList.name
-                    description = showList.description
-                    image = showList.image
-                    show = s
-                }
-                for(j in showList.episodeList) {
-                    EpisodeList.new {
-                        name = j.name
-                        url = j.url
-                        episode = e
-                    }
-                }
+        for (i in sorted) {
+            Show.new {
+                name = i.name
+                url = i.url
+            }.apply {
+                Episode.newEpisode(this, EpisodeApi(i))
             }
-
         }
     }
 }
@@ -385,6 +374,7 @@ object Shows : IntIdTable() {
 
 class Show(id: EntityID<Int>) : IntEntity(id) {
     companion object : IntEntityClass<Show>(Shows)
+
     var name by Shows.name
     var url by Shows.url
 
@@ -393,29 +383,41 @@ class Show(id: EntityID<Int>) : IntEntity(id) {
     }
 }
 
-object Episodes: IntIdTable() {
+object Episodes : IntIdTable() {
+    val url = varchar("url", 1000)
     val name = varchar("name", 1000)
     val image = varchar("image_url", 1000)
     val description = varchar("description", 10000)
     val show = reference("show", Shows)
 }
 
-class Episode(id: EntityID<Int>): IntEntity(id) {
-    companion object : IntEntityClass<Episode>(Episodes)
+class Episode(id: EntityID<Int>) : IntEntity(id) {
+    companion object : IntEntityClass<Episode>(Episodes) {
+        fun newEpisode(s: Show, episodeApi: EpisodeApi) = new {
+            name = episodeApi.name
+            description = episodeApi.description
+            image = episodeApi.image
+            url = episodeApi.source.url
+            show = s
+        }
+    }
+
+    var url by Episodes.url
     var name by Episodes.name
     var image by Episodes.image
     var description by Episodes.description
     var show by Show referencedOn Episodes.show
 }
 
-object EpisodeLists: IntIdTable() {
+object EpisodeLists : IntIdTable() {
     val name = varchar("name", 1000)
-    val url = varchar("url", 1000)
+    val url = varchar("url", 1000).primaryKey()
     val episode = reference("episode", Episodes)
 }
 
-class EpisodeList(id: EntityID<Int>): IntEntity(id) {
+class EpisodeList(id: EntityID<Int>) : IntEntity(id) {
     companion object : IntEntityClass<EpisodeList>(EpisodeLists)
+
     var name by EpisodeLists.name
     var url by EpisodeLists.url
     var episode by Episode referencedOn EpisodeLists.episode
