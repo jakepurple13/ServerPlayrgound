@@ -172,8 +172,8 @@ fun Application.module() {
                 val list = a + c + cm + d + l
                 val sorted = list.sortedBy { it.name }
                 call.respond(mapOf("shows" to synchronized(sorted) { sorted }))*/
-                //getAllShows(db)
-                getAllShowsAndEpisodes(db)
+                getAllShows(db)
+                //getAllShowsAndEpisodes(db)
                 call.respond("OK")
             }
         }
