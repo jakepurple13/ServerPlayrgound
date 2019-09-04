@@ -48,13 +48,15 @@
 
 <table id="myTable">
   <tr class="header">
-    <th style="width:60%;">Name</th>
+    <th style="width:10%;">#</th>
+    <th style="width:50%;">Name</th>
     <th style="width:40%;">Url</th>
   </tr>
-  <#list data as item>
+  <#list 0..data?size-1 as i>
       <tr>
-        <td>${item.name}</td>
-        <td>${item.url}</td>
+        <td>${i}</td>
+        <td>${data[i].name}</td>
+        <td>${data[i].url}</td>
       </tr>
   </#list>
 </table>
@@ -67,7 +69,7 @@ function myFunction() {
   table = document.getElementById("myTable");
   tr = table.getElementsByTagName("tr");
   for (i = 0; i < tr.length; i++) {
-    td = tr[i].getElementsByTagName("td")[0];
+    td = tr[i].getElementsByTagName("td")[1];
     if (td) {
       txtValue = td.textContent || td.innerText;
       if (txtValue.toUpperCase().indexOf(filter) > -1) {
