@@ -1,10 +1,11 @@
+@file:Suppress("RegExpRedundantEscape")
+
 package com.example
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.google.gson.Gson
-import com.google.gson.JsonParser
 import freemarker.cache.ClassTemplateLoader
 import io.ktor.application.Application
 import io.ktor.application.call
@@ -36,23 +37,19 @@ import io.ktor.routing.routing
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.html.*
-import kotlinx.html.dom.document
-import okhttp3.OkHttpClient
 import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.IntIdTable
 import org.jetbrains.exposed.sql.*
-import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
-import org.json.simple.JSONObject
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
-import java.net.URI
+import java.net.SocketTimeoutException
 import java.net.URL
 import java.util.*
 import kotlin.collections.ArrayList
@@ -61,7 +58,17 @@ fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
 object DbSettings {
     val db by lazy {
-        Database.connect("jdbc:h2:mem:regular;DB_CLOSE_DELAY=-1;", "org.h2.Driver")
+        //Database.connect("jdbc:h2:mem:regular;DB_CLOSE_DELAY=-1;", "org.h2.Driver")
+        //Database.connect("jdbc:sqlite:/Users/jrein/Downloads/kotlin-examples-master/tutorials/mpp-iOS-Android/servertesting/resources/database/data.db", "org.sqlite.JDBC")
+        /*Database.connect(
+            "jdbc:h2:~/resources/database/seert.db",
+            "org.h2.Driver"
+        )*/
+
+        Database.connect(
+            "jdbc:h2:/Users/jrein/Downloads/kotlin-examples-master/tutorials/mpp-iOS-Android/servertesting/resources/database/takefour.db",
+            "org.h2.Driver"
+        )
     }
 }
 
@@ -69,8 +76,8 @@ fun Application.module() {
     val db = DbSettings.db
 
     GlobalScope.launch {
-        getAllShows(db)
-        //getAllShowsAndEpisodes(db)
+        //getAllShows(db)
+        getAllShowsAndEpisodes(db)
     }
 
     val simpleJwt = SimpleJWT("my-super-secret-for-jwt")
@@ -186,7 +193,13 @@ fun Application.module() {
                 val sorted = list.sortedBy { it.name }
                 call.respond(mapOf("shows" to synchronized(sorted) { sorted }))*/
                 //getAllShowsAndEpisodes(db)
-                call.respond("OK")
+                val list = arrayListOf<ShowInfo>()
+                transaction(db) {
+                    for (i in Show.all()) {
+                        list.add(ShowInfo(i.name, i.url))
+                    }
+                }
+                call.respond(mapOf("shows" to synchronized(list) { list }))
             }
         }
         route("/si") {
@@ -200,6 +213,41 @@ fun Application.module() {
                     else -> ""
                 }
                 val episode = EpisodeApi(ShowInfo(url, fullUrl))
+                call.respond(mapOf("EpisodeInfo" to episode))
+            }
+        }
+        route("/nsi/{name}") {
+            get {
+                val name = call.parameters["name"]!!
+
+                data class EpListInfo(val name: String, val url: String)
+                data class EpisodeApiInfo(
+                    val name: String,
+                    val image: String,
+                    val url: String,
+                    val description: String,
+                    val episodeList: List<EpListInfo>
+                )
+
+                val episode: ArrayList<EpisodeApiInfo> = arrayListOf()
+
+                transaction(db) {
+                    val e = Episode.all().toList().filter { it.name.equals(name.replace("-", " "), true) }
+                    for (i in e) {
+                        val l = EpisodeList.all().toList().filter { it.episode.url == i.url }
+                        val list = arrayListOf<EpListInfo>()
+                        for (j in l) {
+                            list += EpListInfo(j.name, j.url)
+                        }
+                        episode += EpisodeApiInfo(
+                            i.name,
+                            i.image,
+                            i.url,
+                            i.description,
+                            list
+                        )
+                    }
+                }
                 call.respond(mapOf("EpisodeInfo" to episode))
             }
         }
@@ -295,15 +343,9 @@ fun getAllShows(db: Database) {
     transaction(db) {
         SchemaUtils.create(Shows)
 
-        val a = ShowApi(Source.ANIME).showInfoList.toList()
-        val c = ShowApi(Source.CARTOON).showInfoList.toList()
-        val cm = ShowApi(Source.CARTOON_MOVIES).showInfoList.toList()
-        val d = ShowApi(Source.DUBBED).showInfoList.toList()
-        val l = ShowApi(Source.LIVE_ACTION).showInfoList.toList()
-        val list = a + c + cm + d + l
-        val sorted = list.sortedBy { it.name }
+        val list = ShowApi.getAll().sortedBy { it.name }
 
-        for (i in sorted) {
+        for (i in list) {
             Show.new {
                 name = i.name
                 url = i.url
@@ -312,26 +354,31 @@ fun getAllShows(db: Database) {
     }
 }
 
-fun getAllShowsAndEpisodes(db: Database) {
+fun getAllShowsAndEpisodes(db: Database) = GlobalScope.launch {
+
     transaction(db) {
 
-        SchemaUtils.create(Shows, Episodes)
+        SchemaUtils.create(Shows, Episodes, EpisodeLists)
 
-        val a = ShowApi(Source.ANIME).showInfoList.toList()
-        val c = ShowApi(Source.CARTOON).showInfoList.toList()
-        val cm = ShowApi(Source.CARTOON_MOVIES).showInfoList.toList()
-        val d = ShowApi(Source.DUBBED).showInfoList.toList()
-        val l = ShowApi(Source.LIVE_ACTION).showInfoList.toList()
-        val list = a + c + cm + d + l
-        val sorted = list.sortedBy { it.name }
+        val list = ShowApi.getAll().sortedBy { it.name }
 
-        for (i in sorted) {
-            Show.new {
+        for (i in list) {
+            val s = Show.new {
                 name = i.name
                 url = i.url
-            }.apply {
-                Episode.newEpisode(this, EpisodeApi(i))
             }
+            val episodeApi = EpisodeApi(i)
+            val e = Episode.newEpisode(s, episodeApi)
+            val epl = episodeApi.episodeList
+            for (li in epl) {
+                val el = EpisodeList.new {
+                    name = li.name
+                    url = li.url
+                    episode = e
+                }
+                println(el)
+            }
+            println("${s.name} and ${e.name}")
         }
     }
 }
@@ -368,8 +415,8 @@ class InvalidCredentialsException(message: String) : RuntimeException(message)
 class LoginRegister(val user: String, val password: String)
 
 object Shows : IntIdTable() {
-    val name = varchar("show_name", 1000)
-    val url = varchar("show_url", 1000).primaryKey()
+    val name = varchar("show_name", 10000)
+    val url = varchar("show_url", 10000).primaryKey()
 }
 
 class Show(id: EntityID<Int>) : IntEntity(id) {
@@ -384,9 +431,9 @@ class Show(id: EntityID<Int>) : IntEntity(id) {
 }
 
 object Episodes : IntIdTable() {
-    val url = varchar("url", 1000)
-    val name = varchar("name", 1000)
-    val image = varchar("image_url", 1000)
+    val url = varchar("url", 10000)
+    val name = varchar("name", 10000)
+    val image = varchar("image_url", 10000)
     val description = varchar("description", 10000)
     val show = reference("show", Shows)
 }
@@ -407,11 +454,15 @@ class Episode(id: EntityID<Int>) : IntEntity(id) {
     var image by Episodes.image
     var description by Episodes.description
     var show by Show referencedOn Episodes.show
+
+    override fun toString(): String {
+        return "$name: $url | $description | $image | $show"
+    }
 }
 
 object EpisodeLists : IntIdTable() {
-    val name = varchar("name", 1000)
-    val url = varchar("url", 1000).primaryKey()
+    val name = varchar("name", 10000)
+    val url = varchar("url", 10000).primaryKey()
     val episode = reference("episode", Episodes)
 }
 
@@ -421,6 +472,10 @@ class EpisodeList(id: EntityID<Int>) : IntEntity(id) {
     var name by EpisodeLists.name
     var url by EpisodeLists.url
     var episode by Episode referencedOn EpisodeLists.episode
+
+    override fun toString(): String {
+        return "$name: $url | ${episode.name}"
+    }
 }
 
 //--------------------------
@@ -508,6 +563,18 @@ open class ShowInfo(val name: String, val url: String) {
  * The actual api!
  */
 class ShowApi(private val source: Source) {
+
+    companion object {
+        fun getAll(): List<ShowInfo> {
+            val a = ShowApi(Source.ANIME).showInfoList.toList()
+            val c = ShowApi(Source.CARTOON).showInfoList.toList()
+            val cm = ShowApi(Source.CARTOON_MOVIES).showInfoList.toList()
+            val d = ShowApi(Source.DUBBED).showInfoList.toList()
+            val l = ShowApi(Source.LIVE_ACTION).showInfoList.toList()
+            return a + c + cm + d + l
+        }
+    }
+
     private var doc: Document = Jsoup.connect(source.link).get()
 
     /**
@@ -659,7 +726,8 @@ class EpisodeApi(val source: ShowInfo, timeOut: Int = 10000) {
         get() {
             when {
                 source.url.contains("putlocker") -> try {
-                    val client = OkHttpClient()
+                    throw Exception()
+                    /*val client = OkHttpClient()
                     val request = okhttp3.Request.Builder()
                         .url("http://www.omdbapi.com/?t=$name&plot=full&apikey=e91b86ee")
                         .get()
@@ -670,8 +738,7 @@ class EpisodeApi(val source: ShowInfo, timeOut: Int = 10000) {
                     val year = jsonObj.get("Year")
                     val released = jsonObj.get("Released")
                     val plot = jsonObj.get("Plot")
-                    throw Exception()
-                    //return "Years Active: $year\nReleased: $released\n$plot"
+                    return "Years Active: $year\nReleased: $released\n$plot"*/
                 } catch (e: Exception) {
                     var textToReturn = ""
                     val des = doc.select(".mov-desc")
@@ -691,7 +758,7 @@ class EpisodeApi(val source: ShowInfo, timeOut: Int = 10000) {
                 }
                 source.url.contains("gogoanime") -> {
                     val des = doc.select("p.anime-details").text()
-                    return if (des.isNullOrBlank()) "Sorry, an error has occurred" else des
+                    return if (des.isNullOrBlank() || des.length > 10000) "Sorry, an error has occurred" else des
                 }
                 else -> {
                     val des =
@@ -779,48 +846,61 @@ class EpisodeApi(val source: ShowInfo, timeOut: Int = 10000) {
  * Actual Episode info, name and url
  */
 class EpisodeInfo(name: String, url: String) : ShowInfo(name, url) {
-/*
-    */
+
     /**
      * returns a url link to the episodes video
      * # Use for anything but movies
-     *//*
-    fun getVideoLink(): String {
+     */
+    /*fun getVideoLink(): String {
         if (url.contains("putlocker")) {
-            val d = "<iframe[^>]+src=\"([^\"]+)\"[^>]*><\\/iframe>".toRegex().toPattern().matcher(getHtml(url))
-            if (d.find()) {
-                val a = "<p[^>]+id=\"videolink\">([^>]*)<\\/p>".toRegex().toPattern().matcher(getHtml(d.group(1)!!))
-                if (a.find()) {
-                    return "https://verystream.com/gettoken/${a.group(1)!!}?mime=true"
+            val firstHtml = getHtml(url)
+            if(firstHtml!=null) {
+                val d = "<iframe[^>]+src=\"([^\"]+)\"[^>]*><\\/iframe>".toRegex().toPattern().matcher(firstHtml)
+                if (d.find()) {
+                    val secondHtml = getHtml(d.group(1)!!)
+                    if(secondHtml!=null) {
+                        val a = "<p[^>]+id=\"videolink\">([^>]*)<\\/p>".toRegex().toPattern().matcher(secondHtml)
+                        if (a.find()) {
+                            return "https://verystream.com/gettoken/${a.group(1)!!}?mime=true"
+                        }
+                    } else {
+                        return "Unable to get"
+                    }
                 }
+            } else {
+                return "Unable to get"
             }
         } else if (url.contains("gogoanime")) {
             val doc = Jsoup.connect(url).get()
             return doc.select("a[download^=http]").attr("abs:download")
         } else {
             val episodeHtml = getHtml(url)
-            val matcher = "<iframe src=\"([^\"]+)\"[^<]+<\\/iframe>".toRegex().toPattern()
-                .matcher(episodeHtml)
-            val list = arrayListOf<String>()
-            while (matcher.find()) {
-                list.add(matcher.group(1)!!)
-            }
+            if(episodeHtml!=null) {
+                val matcher = "<iframe src=\"([^\"]+)\"[^<]+<\\/iframe>".toRegex().toPattern().matcher(episodeHtml)
+                val list = arrayListOf<String>()
+                while (matcher.find()) {
+                    list.add(matcher.group(1)!!)
+                }
 
-            val videoHtml = getHtml(list[0])
-            val reg =
-                "var video_links = (\\{.*?\\});".toRegex().toPattern().matcher(videoHtml)
-            if (reg.find()) {
-                val d = reg.group(1)
-                val g = Gson()
-                val d1 = g.fromJson(d, NormalLink::class.java)
+                val videoHtml = getHtml(list[0])
+                if(videoHtml!=null) {
+                    val reg = "var video_links = (\\{.*?\\});".toRegex().toPattern().matcher(videoHtml)
+                    if (reg.find()) {
+                        val d = reg.group(1)
+                        val g = Gson()
+                        val d1 = g.fromJson(d, NormalLink::class.java)
 
-                return d1.normal!!.storage!![0].link!!
+                        return d1.normal!!.storage!![0].link!!
+                    }
+                } else {
+                    return "Unable to get"
+                }
             }
+            return "Unable to get"
         }
         return ""
-    }
+    }*/
 
-   */
     /**
      * returns a url link to the episodes video
      * # Use for movies
@@ -978,31 +1058,35 @@ class EpisodeInfo(name: String, url: String) : ShowInfo(name, url) {
     }
 
     @Throws(IOException::class)
-    private fun getHtml(url: String): String {
-        // Build and set timeout values for the request.
-        val connection = URL(url).openConnection()
-        connection.connectTimeout = 5000
-        connection.readTimeout = 5000
-        connection.setRequestProperty(
-            "User-Agent",
-            "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0"
-        )
-        connection.addRequestProperty("Accept-Language", "en-US,en;q=0.5")
-        connection.addRequestProperty("Referer", "http://thewebsite.com")
-        connection.connect()
+    private fun getHtml(url: String): String? {
+        try {
+            // Build and set timeout values for the request.
+            val connection = URL(url).openConnection()
+            connection.connectTimeout = 5000
+            connection.readTimeout = 5000
+            connection.setRequestProperty(
+                "User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0"
+            )
+            connection.addRequestProperty("Accept-Language", "en-US,en;q=0.5")
+            connection.addRequestProperty("Referer", "http://thewebsite.com")
+            connection.connect()
 
-        // Read and store the result line by line then return the entire string.
-        val in1 = connection.getInputStream()
-        val reader = BufferedReader(InputStreamReader(in1))
-        val html = StringBuilder()
-        var line: String? = ""
-        while (line != null) {
-            line = reader.readLine()
-            html.append(line)
+            // Read and store the result line by line then return the entire string.
+            val in1 = connection.getInputStream()
+            val reader = BufferedReader(InputStreamReader(in1))
+            val html = StringBuilder()
+            var line: String? = ""
+            while (line != null) {
+                line = reader.readLine()
+                html.append(line)
+            }
+            in1.close()
+
+            return html.toString()
+        } catch(e: SocketTimeoutException) {
+            return null
         }
-        in1.close()
-
-        return html.toString()
     }
 
     private fun getFinalURL(url: URL): URL? {
