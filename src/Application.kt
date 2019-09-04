@@ -77,7 +77,7 @@ fun Application.module() {
 
     GlobalScope.launch {
         //getAllShows(db)
-        getAllShowsAndEpisodes(db)
+        //getAllShowsAndEpisodes(db)
     }
 
     val simpleJwt = SimpleJWT("my-super-secret-for-jwt")
@@ -279,57 +279,7 @@ fun Application.module() {
                 call.respond(FreeMarkerContent("index.ftl", mapOf("data" to filtered2.toList()), ""))
             }
             get {
-                fun getJSInfo(type: String = "as") = "var xmlHttp = new XMLHttpRequest();\n" +
-                        " var e = document.getElementById(\"show_type\");\n  " +
-                        " var link = e.options[e.selectedIndex].value;\n" +
-                        " var search = document.getElementById(\"show_name\").value;\n" +
-                        "if(search!=null) {\n" +
-                        " link+=\"?name=\"+search;\n" +
-                        "}\n" +
-                        " xmlHttp.open( \"GET\", link, false ); // false for synchronous request\n" +
-                        "    xmlHttp.send( null );\n" +
-                        "    document.getElementById(\"show_list\").innerHTML = xmlHttp.responseText;"
-                call.respondHtml {
-                    head {
-                        link(rel = "stylesheet", href = "/static/styles.css")
-                        script(src = "https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js") {
-
-                        }
-                    }
-                    body {
-                        p {
-                            +"Hello"
-                        }
-                        select {
-                            id = "show_type"
-                            option {
-                                value = "ls"
-                                +"Live Action"
-                            }
-                            option {
-                                value = "as"
-                                +"Anime"
-                            }
-                            option {
-                                value = "cs"
-                                +"Cartoon"
-                            }
-                            //option(content = "Recent Cartoon")
-                            //option(content = "Recent Anime")
-                        }
-                        textInput {
-                            id = "show_name"
-                            placeholder = "Enter Show Name"
-                        }
-                        button(type = ButtonType.button) {
-                            onClick = getJSInfo("as")
-                            +"Submit"
-                        }
-                        p {
-                            id = "show_list"
-                        }
-                    }
-                }
+                call.respond(FreeMarkerContent("table.ftl", mapOf("data" to ShowApi.getAll().toList().sortedBy { it.name })))
             }
         }
         static("/static") {
