@@ -241,19 +241,12 @@ fun Application.module() {
                     'a' -> "animetoon"
                     else -> ""
                 }
-
                 transaction(db) {
-                    val e = Episode.all().toList().filter {
-                        val list = it.url.split("/")
-                        val its = if (list.last().isBlank()) {
-                            list[list.size - 2]
-                        } else {
-                            list.last()
-                        }
-                        its.equals(name.substring(1), true) && it.url.contains(source, true)
-                    }
+                    val e = Episode.find {
+                        Episodes.url like "%$source%" and (Episodes.url like "%${name.substring(1)}%")
+                    }.toList()
                     for (i in e) {
-                        val l = EpisodeList.all().toList().filter { it.episode.url == i.url }
+                        val l = EpisodeList.find { EpisodeLists.episode eq i.id }
                         val list = arrayListOf<EpListInfo>()
                         for (j in l) {
                             list += EpListInfo(j.name, j.url)
@@ -282,19 +275,28 @@ fun Application.module() {
 
                 data class EpListInfo(val name: String, val url: String)
                 data class EpisodeApiInfo(
-                    val name: String,
-                    val image: String,
-                    val url: String,
-                    val description: String,
-                    val episodeList: List<EpListInfo>
+                    val name: String = "",
+                    val image: String = "",
+                    val url: String = "",
+                    val description: String = "",
+                    val episodeList: List<EpListInfo> = emptyList()
                 )
+
+                val source = when (name[0]) {
+                    'p' -> "putlocker"
+                    'g' -> "gogoanime"
+                    'a' -> "animetoon"
+                    else -> ""
+                }
 
                 val episode: ArrayList<EpisodeApiInfo> = arrayListOf()
 
                 transaction(db) {
-                    val e = Episode.all().toList().filter { it.name.equals(name.replace("-", " "), true) }
+                    val e = Episode.find {
+                        Episodes.url like "%$source%" and (Episodes.url like "%${name.substring(1)}%")
+                    }.toList()
                     for (i in e) {
-                        val l = EpisodeList.all().toList().filter { it.episode.url == i.url }
+                        val l = EpisodeList.find { EpisodeLists.episode eq i.id }
                         val list = arrayListOf<EpListInfo>()
                         for (j in l) {
                             list += EpListInfo(j.name, j.url)
@@ -324,6 +326,9 @@ fun Application.module() {
                 transaction(db) {
                     debug = false
                     val s = Shows.select { Shows.name like "%$url%" }.toList()
+                    for(i in s) {
+
+                    }
                     prettyLog(s.joinToString { "$it\n" })
                     list = Show.all().toList()
                 }
@@ -347,7 +352,7 @@ fun Application.module() {
                 }
                 call.respond(
                     FreeMarkerContent(
-                        "table.ftl",
+                        "boottable.ftl",
                         mapOf("data" to list)
                     )
                 )

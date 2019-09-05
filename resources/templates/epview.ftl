@@ -56,15 +56,13 @@
 
     <table id="myTable">
         <tr class="header">
-            <th style="width:10%;">#</th>
-            <th style="width:50%;">Episode Name</th>
+            <th style="width:60%;">Episode Name</th>
             <th style="width:40%;">Url</th>
         </tr>
-        <#list 0..data.episodeList?size-1 as i>
+        <#list data.episodeList as i>
             <tr>
-                <td>${i}</td>
-                <td>${data.episodeList[i].name}</td>
-                <td><a href="${data.episodeList[i].url}">${data.episodeList[i].url}</a></td>
+                <td>${i.name}</td>
+                <td><a href="${i.url}">${i.url}</a></td>
             </tr>
         </#list>
     </table>
