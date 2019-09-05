@@ -326,7 +326,7 @@ fun Application.module() {
                 transaction(db) {
                     debug = false
                     val s = Shows.select { Shows.name like "%$url%" }.toList()
-                    for(i in s) {
+                    for (i in s) {
 
                     }
                     prettyLog(s.joinToString { "$it\n" })
@@ -398,24 +398,73 @@ fun getAllShowsAndEpisodes(db: Database) = GlobalScope.launch {
                 val e = Episode.newEpisodes(s, episodeApi)
                 val epl = episodeApi.episodeList
                 for (li in epl) {
-                    /*val el = EpisodeList.new {
-                        name = li.name
-                        url = li.url
-                        episode = e
-                    }*/
                     EpisodeLists.insert {
                         it[name] = li.name
                         it[url] = li.url
                         it[episode] = e
                     }
-                    //println(el)
                 }
-                //println("${s.name} and ${e.name}")
             } catch (e: Exception) {
                 continue
             }
 
         }
+    }
+}
+
+fun addNewShow(db: Database, show: ShowInfo)  {
+    transaction(db) {
+        val s = Shows.insert {
+            it[name] = show.name
+            it[url] = show.url
+        } get Shows.id
+        try {
+            val episodeApi = EpisodeApi(show, 30000)
+            val e = Episode.newEpisodes(s, episodeApi)
+            val epl = episodeApi.episodeList
+            for (li in epl) {
+                EpisodeLists.insert {
+                    it[name] = li.name
+                    it[url] = li.url
+                    it[episode] = e
+                }
+            }
+        } catch (e: Exception) {
+
+        }
+    }
+}
+
+fun updateShows(db: Database) = GlobalScope.launch {
+    transaction(db) {
+
+        SchemaUtils.create(Shows, Episodes, EpisodeLists)
+
+        val list = ShowApi.getAllRecent().sortedBy { it.name }
+
+        for ((j, i) in list.withIndex()) {
+            val s = Show.find { Shows.url eq i.url }.toList()
+            if (s.isEmpty()) {
+                addNewShow(db, i)
+                continue
+            }
+            try {
+                val episodeApi = EpisodeApi(i, 30000)
+                val e = Episode.find { Episodes.show eq s[0].id }.toList()[0]
+                val epl = episodeApi.episodeList
+                for (li in epl) {
+                    EpisodeLists.insert {
+                        it[name] = li.name
+                        it[url] = li.url
+                        it[episode] = e.id
+                    }
+                }
+            } catch (e: Exception) {
+                continue
+            }
+
+        }
+
     }
 }
 
@@ -575,10 +624,11 @@ enum class Source(val link: String, val recent: Boolean = false, var movie: Bool
     //RECENT_ANIME("http://www.animeplus.tv/anime-updates", true),
     RECENT_ANIME("https://www.gogoanime1.com/home/latest-episodes", true),
     RECENT_CARTOON("http://www.animetoon.org/updates", true),
-    LIVE_ACTION("https://www.putlocker.fyi/a-z-shows/");
+    LIVE_ACTION("https://www.putlocker.fyi/a-z-shows/"),
+    RECENT_LIVE_ACTION("https://www1.putlocker.fyi/recent-episodes/", true);
 
     companion object SourceUrl {
-        fun getSourceFromUrl(url: String): Source {
+        fun getSourceFromUrl(url: String): Source? {
             return when (url) {
                 ANIME.link -> ANIME
                 CARTOON.link -> CARTOON
@@ -588,7 +638,8 @@ enum class Source(val link: String, val recent: Boolean = false, var movie: Bool
                 RECENT_ANIME.link -> RECENT_ANIME
                 RECENT_CARTOON.link -> RECENT_CARTOON
                 LIVE_ACTION.link -> LIVE_ACTION
-                else -> ANIME
+                RECENT_LIVE_ACTION.link -> RECENT_LIVE_ACTION
+                else -> null
             }
         }
     }
@@ -616,6 +667,13 @@ class ShowApi(private val source: Source) {
             val d = ShowApi(Source.DUBBED).showInfoList.toList()
             val l = ShowApi(Source.LIVE_ACTION).showInfoList.toList()
             return a + c + cm + d + l
+        }
+
+        fun getAllRecent(): List<ShowInfo> {
+            val a = ShowApi(Source.RECENT_ANIME).showInfoList.toList()
+            val c = ShowApi(Source.RECENT_CARTOON).showInfoList.toList()
+            val cm = ShowApi(Source.RECENT_LIVE_ACTION).showInfoList.toList()
+            return a + c + cm
         }
     }
 
@@ -692,6 +750,14 @@ class ShowApi(private val source: Source) {
     private fun getRecentList(): ArrayList<ShowInfo> {
         return if (source.link.contains("gogoanime")) {
             gogoAnimeRecent()
+        } else if (source.link.contains("putlocker")) {
+            val listOfStuff = doc.allElements.select("div.col-6")
+            val list = arrayListOf<ShowInfo>()
+            for (i in listOfStuff) {
+                val url = i.select("a.thumbnail").attr("abs:href")
+                list.add(ShowInfo(url.substring(0, url.indexOf("season")), i.select("span.mov_title").text()))
+            }
+            list
         } else {
             var listOfStuff = doc.allElements.select("div.left_col").select("table#updates")
                 .select("a[href^=http]")
