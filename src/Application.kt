@@ -280,10 +280,24 @@ fun Application.module() {
                 call.respond(FreeMarkerContent("index.ftl", mapOf("data" to filtered2.toList()), ""))
             }
             get {
-                call.respond(
+                /*call.respond(
                     FreeMarkerContent(
                         "table.ftl",
                         mapOf("data" to ShowApi.getAll().toList().sortedBy { it.name })
+                    )
+                )*/
+                val list = arrayListOf<ShowInfo>()
+                transaction(db) {
+                    val l = Show.all().toList()
+                    l.forEach {
+                        list.add(ShowInfo(it.name, it.url))
+                        println(it)
+                    }
+                }
+                call.respond(
+                    FreeMarkerContent(
+                        "table.ftl",
+                        mapOf("data" to list)
                     )
                 )
             }
@@ -318,24 +332,31 @@ fun getAllShowsAndEpisodes(db: Database) = GlobalScope.launch {
 
         val list = ShowApi.getAll().sortedBy { it.name }
 
-        for (i in list) {
-            val s = Show.new {
-                name = i.name
-                url = i.url
-            }
+        for ((j, i) in list.withIndex()) {
+            val s = Shows.insert {
+                it[name] = i.name
+                it[url] = i.url
+            } get Shows.id
             try {
                 val episodeApi = EpisodeApi(i, 30000)
-                val e = Episode.newEpisode(s, episodeApi)
+                val e = Episode.newEpisodes(s, episodeApi)
                 val epl = episodeApi.episodeList
                 for (li in epl) {
-                    val el = EpisodeList.new {
+                    /*val el = EpisodeList.new {
                         name = li.name
                         url = li.url
                         episode = e
+                    }*/
+                    EpisodeLists.insert {
+                        it[name] = li.name
+                        it[url] = li.url
+                        it[episode] = e
                     }
-                    println(el)
+                    //println(el)
                 }
-                println("${s.name} and ${e.name}")
+                if(j==60)
+                    break
+                //println("${s.name} and ${e.name}")
             } catch (e: Exception) {
                 continue
             }
@@ -408,6 +429,13 @@ class Episode(id: EntityID<Int>) : IntEntity(id) {
             url = episodeApi.source.url
             show = s
         }
+        fun newEpisodes(s: EntityID<Int>, episodeApi: EpisodeApi) = Episodes.insert {
+            it[name] = episodeApi.name
+            it[description] = episodeApi.description
+            it[image] = episodeApi.image
+            it[url] = episodeApi.source.url
+            it[show] = s
+        } get Episodes.id
     }
 
     var url by Episodes.url
