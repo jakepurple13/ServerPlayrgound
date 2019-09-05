@@ -56,6 +56,9 @@ import kotlin.collections.ArrayList
 
 fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
+private const val dbPath =
+    "/Users/jrein/Downloads/kotlin-examples-master/tutorials/mpp-iOS-Android/servertesting/resources/database/takeeight.db"
+
 object DbSettings {
     val db by lazy {
         //Database.connect("jdbc:h2:mem:regular;DB_CLOSE_DELAY=-1;", "org.h2.Driver")
@@ -66,7 +69,7 @@ object DbSettings {
         )*/
 
         Database.connect(
-            "jdbc:h2:/Users/jakerein/IdeaProjects/ServerPlayrgound/resources/database/takeseven.db",
+            "jdbc:h2:$dbPath",
             "org.h2.Driver"
         )
     }
@@ -78,7 +81,7 @@ fun Application.module() {
 
     GlobalScope.launch {
         //getAllShows(db)
-        getAllShowsAndEpisodes(db)
+        //getAllShowsAndEpisodes(db)
     }
 
     val simpleJwt = SimpleJWT("my-super-secret-for-jwt")
@@ -223,6 +226,62 @@ fun Application.module() {
 
                 data class EpListInfo(val name: String, val url: String)
                 data class EpisodeApiInfo(
+                    val name: String = "",
+                    val image: String = "",
+                    val url: String = "",
+                    val description: String = "",
+                    val episodeList: List<EpListInfo> = emptyList()
+                )
+
+                var episode = EpisodeApiInfo()
+
+                val source = when (name[0]) {
+                    'p' -> "putlocker"
+                    'g' -> "gogoanime"
+                    'a' -> "animetoon"
+                    else -> ""
+                }
+
+                transaction(db) {
+                    val e = Episode.all().toList().filter {
+                        val list = it.url.split("/")
+                        val its = if (list.last().isBlank()) {
+                            list[list.size - 2]
+                        } else {
+                            list.last()
+                        }
+                        its.equals(name.substring(1), true) && it.url.contains(source, true)
+                    }
+                    for (i in e) {
+                        val l = EpisodeList.all().toList().filter { it.episode.url == i.url }
+                        val list = arrayListOf<EpListInfo>()
+                        for (j in l) {
+                            list += EpListInfo(j.name, j.url)
+                        }
+                        episode = EpisodeApiInfo(
+                            i.name,
+                            i.image,
+                            i.url,
+                            i.description,
+                            list
+                        )
+                        break
+                    }
+                }
+                call.respond(
+                    FreeMarkerContent(
+                        "epview.ftl",
+                        mapOf("data" to episode)
+                    )
+                )
+            }
+        }
+        route("/api/nsi/{name}") {
+            get {
+                val name = call.parameters["name"]!!
+
+                data class EpListInfo(val name: String, val url: String)
+                data class EpisodeApiInfo(
                     val name: String,
                     val image: String,
                     val url: String,
@@ -264,6 +323,8 @@ fun Application.module() {
                 var list = listOf<Show>()
                 transaction(db) {
                     debug = false
+                    val s = Shows.select { Shows.name like "%$url%" }.toList()
+                    prettyLog(s.joinToString { "$it\n" })
                     list = Show.all().toList()
                 }
 
@@ -280,19 +341,9 @@ fun Application.module() {
                 call.respond(FreeMarkerContent("index.ftl", mapOf("data" to filtered2.toList()), ""))
             }
             get {
-                /*call.respond(
-                    FreeMarkerContent(
-                        "table.ftl",
-                        mapOf("data" to ShowApi.getAll().toList().sortedBy { it.name })
-                    )
-                )*/
-                val list = arrayListOf<ShowInfo>()
+                var list = listOf<Show>()
                 transaction(db) {
-                    val l = Show.all().toList()
-                    l.forEach {
-                        list.add(ShowInfo(it.name, it.url))
-                        println(it)
-                    }
+                    list = Show.all().toList()
                 }
                 call.respond(
                     FreeMarkerContent(
@@ -354,8 +405,6 @@ fun getAllShowsAndEpisodes(db: Database) = GlobalScope.launch {
                     }
                     //println(el)
                 }
-                if(j==60)
-                    break
                 //println("${s.name} and ${e.name}")
             } catch (e: Exception) {
                 continue
@@ -429,6 +478,7 @@ class Episode(id: EntityID<Int>) : IntEntity(id) {
             url = episodeApi.source.url
             show = s
         }
+
         fun newEpisodes(s: EntityID<Int>, episodeApi: EpisodeApi) = Episodes.insert {
             it[name] = episodeApi.name
             it[description] = episodeApi.description

@@ -94,8 +94,25 @@
                 }
             }
 
+            String.prototype.replaceAll = function(str1, str2, ignore) {
+                return this.replace(new RegExp(str1.replace(/([\/\,\!\\\^\$\{\}\[\]\(\)\.\*\+\?\|\<\>\-\&])/g,"\\$&"),(ignore?"gi":"g")),(typeof(str2)=="string")?str2.replace(/\$/g,"$$$$"):str2);
+            }
+
             function tableText(tableCell) {
-                alert(tableCell.innerHTML);
+                var type = "";
+                var u = tableCell.cells[2].innerHTML;
+
+                if(u.includes("gogoanime")) {
+                    type = "g";
+                } else if(u.includes("putlocker")) {
+                    type = "p";
+                } else if(u.includes("animetoon")) {
+                    type = "a";
+                }
+                var location = u.split("/");//replace(" ", "-").replaceAll("/", "[]");
+                var locate = location.filter(x => x != "").slice(-1)[0];
+                console.log(u + " and " + type + " and " + location + " and " + locate);
+                window.open("/nsi/" + type + locate, '_blank');
             }
     </script>
 
