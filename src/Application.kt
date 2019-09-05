@@ -66,18 +66,19 @@ object DbSettings {
         )*/
 
         Database.connect(
-            "jdbc:h2:/Users/jrein/Downloads/kotlin-examples-master/tutorials/mpp-iOS-Android/servertesting/resources/database/takefour.db",
+            "jdbc:h2:/Users/jakerein/IdeaProjects/ServerPlayrgound/resources/database/takeseven.db",
             "org.h2.Driver"
         )
     }
 }
 
 fun Application.module() {
+    System.setProperty("https.protocols", "TLSv1.2,TLSv1.1,SSLv3");
     val db = DbSettings.db
 
     GlobalScope.launch {
         //getAllShows(db)
-        //getAllShowsAndEpisodes(db)
+        getAllShowsAndEpisodes(db)
     }
 
     val simpleJwt = SimpleJWT("my-super-secret-for-jwt")
@@ -279,7 +280,12 @@ fun Application.module() {
                 call.respond(FreeMarkerContent("index.ftl", mapOf("data" to filtered2.toList()), ""))
             }
             get {
-                call.respond(FreeMarkerContent("table.ftl", mapOf("data" to ShowApi.getAll().toList().sortedBy { it.name })))
+                call.respond(
+                    FreeMarkerContent(
+                        "table.ftl",
+                        mapOf("data" to ShowApi.getAll().toList().sortedBy { it.name })
+                    )
+                )
             }
         }
         static("/static") {
@@ -317,18 +323,23 @@ fun getAllShowsAndEpisodes(db: Database) = GlobalScope.launch {
                 name = i.name
                 url = i.url
             }
-            val episodeApi = EpisodeApi(i)
-            val e = Episode.newEpisode(s, episodeApi)
-            val epl = episodeApi.episodeList
-            for (li in epl) {
-                val el = EpisodeList.new {
-                    name = li.name
-                    url = li.url
-                    episode = e
+            try {
+                val episodeApi = EpisodeApi(i, 30000)
+                val e = Episode.newEpisode(s, episodeApi)
+                val epl = episodeApi.episodeList
+                for (li in epl) {
+                    val el = EpisodeList.new {
+                        name = li.name
+                        url = li.url
+                        episode = e
+                    }
+                    println(el)
                 }
-                println(el)
+                println("${s.name} and ${e.name}")
+            } catch (e: Exception) {
+                continue
             }
-            println("${s.name} and ${e.name}")
+
         }
     }
 }
