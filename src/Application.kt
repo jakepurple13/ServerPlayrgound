@@ -45,6 +45,7 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
+import org.jsoup.nodes.Element
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
@@ -82,6 +83,8 @@ fun Application.module() {
     GlobalScope.launch {
         //getAllShows(db)
         //getAllShowsAndEpisodes(db)
+        //prettyLog(ShowApi(Source.LIVE_ACTION_MOVIES).showInfoList.joinToString { "$it\n" })
+        //updateShows(db)
     }
 
     val simpleJwt = SimpleJWT("my-super-secret-for-jwt")
@@ -137,100 +140,16 @@ fun Application.module() {
                 }
             }
         }
-        route("/rc") {
-            get {
-                val s = ShowApi(Source.RECENT_CARTOON).showInfoList
-                call.respond(mapOf("shows" to synchronized(s) { s.toList() }))
-            }
-        }
-        route("/ra") {
-            get {
-                val s = ShowApi(Source.RECENT_ANIME).showInfoList
-                call.respond(mapOf("shows" to synchronized(s) { s.toList() }))
-            }
-        }
-        route("/ls") {
-            get {
-                val s = ShowApi(Source.LIVE_ACTION).showInfoList.toList()
-                val filtered = if (call.parameters.contains("name")) s.filter {
-                    it.name.contains(
-                        call.parameters["name"]!!,
-                        true
-                    )
-                } else s
-
-                call.respond(mapOf("shows" to synchronized(filtered) { filtered }))
-            }
-        }
-        route("/cs") {
-            get {
-                val s = ShowApi(Source.CARTOON).showInfoList.toList()
-                val filtered = if (call.parameters.contains("name")) s.filter {
-                    it.name.contains(
-                        call.parameters["name"]!!,
-                        true
-                    )
-                } else s
-                call.respond(mapOf("shows" to synchronized(s) { filtered }))
-            }
-        }
-        route("/as") {
-            get {
-                val s = ShowApi(Source.ANIME).showInfoList.toList()
-                val filtered = if (call.parameters.contains("name")) s.filter {
-                    it.name.contains(
-                        call.parameters["name"]!!,
-                        true
-                    )
-                } else s
-                call.respond(mapOf("shows" to synchronized(s) { filtered }))
-            }
-        }
-        route("/all") {
-            get {
-                /*val a = ShowApi(Source.ANIME).showInfoList.toList()
-                val c = ShowApi(Source.CARTOON).showInfoList.toList()
-                val cm = ShowApi(Source.CARTOON_MOVIES).showInfoList.toList()
-                val d = ShowApi(Source.DUBBED).showInfoList.toList()
-                val l = ShowApi(Source.LIVE_ACTION).showInfoList.toList()
-                val list = a + c + cm + d + l
-                val sorted = list.sortedBy { it.name }
-                call.respond(mapOf("shows" to synchronized(sorted) { sorted }))*/
-                //getAllShowsAndEpisodes(db)
-                val list = arrayListOf<ShowInfo>()
-                transaction(db) {
-                    for (i in Show.all()) {
-                        list.add(ShowInfo(i.name, i.url))
-                    }
-                }
-                call.respond(mapOf("shows" to synchronized(list) { list }))
-            }
-        }
-        route("/si") {
-            get {
-                val type = call.parameters["type"]!!
-                val url = call.parameters["url"]!!
-                val fullUrl = when {
-                    type.contains("putlocker", true) -> "https://www1.putlocker.fyi/show/$url/"
-                    type.contains("anime", true) -> "https://www.gogoanime1.com/watch/$url"
-                    type.contains("cartoon", true) -> "http://www.animetoon.org/watch-$url"
-                    else -> ""
-                }
-                val episode = EpisodeApi(ShowInfo(url, fullUrl))
-                call.respond(mapOf("EpisodeInfo" to episode))
-            }
-        }
         route("/nsi/{name}") {
             get {
                 val name = call.parameters["name"]!!
 
-                data class EpListInfo(val name: String, val url: String)
                 data class EpisodeApiInfo(
                     val name: String = "",
                     val image: String = "",
                     val url: String = "",
                     val description: String = "",
-                    val episodeList: List<EpListInfo> = emptyList()
+                    val episodeList: List<EpisodeList> = emptyList()
                 )
 
                 var episode = EpisodeApiInfo()
@@ -242,23 +161,20 @@ fun Application.module() {
                     else -> ""
                 }
                 transaction(db) {
-                    val e = Episode.find {
-                        Episodes.url like "%$source%" and (Episodes.url like "%${name.substring(1)}%")
-                    }.toList()
-                    for (i in e) {
-                        val l = EpisodeList.find { EpisodeLists.episode eq i.id }
-                        val list = arrayListOf<EpListInfo>()
-                        for (j in l) {
-                            list += EpListInfo(j.name, j.url)
-                        }
+                    try {
+                        val e = Episode.find {
+                            Episodes.url like "%$source%" and (Episodes.url like "%${name.substring(1)}%")
+                        }.toList()
+                        val list = EpisodeList.find { EpisodeLists.episode eq e[0].id }.toList()
                         episode = EpisodeApiInfo(
-                            i.name,
-                            i.image,
-                            i.url,
-                            i.description,
+                            e[0].name,
+                            e[0].image,
+                            e[0].url,
+                            e[0].description,
                             list
                         )
-                        break
+                    } catch (ignored: Exception) {
+
                     }
                 }
                 call.respond(
@@ -289,66 +205,51 @@ fun Application.module() {
                     else -> ""
                 }
 
-                val episode: ArrayList<EpisodeApiInfo> = arrayListOf()
+                var episode = EpisodeApiInfo()
 
                 transaction(db) {
                     val e = Episode.find {
-                        Episodes.url like "%$source%" and (Episodes.url like "%${name.substring(1)}%")
+                        Episodes.url like "%$source%" and (Episodes.url like "%${name.substring(
+                            1,
+                            name.indexOf(".json")
+                        )}%")
                     }.toList()
-                    for (i in e) {
-                        val l = EpisodeList.find { EpisodeLists.episode eq i.id }
-                        val list = arrayListOf<EpListInfo>()
-                        for (j in l) {
-                            list += EpListInfo(j.name, j.url)
-                        }
-                        episode += EpisodeApiInfo(
-                            i.name,
-                            i.image,
-                            i.url,
-                            i.description,
-                            list
-                        )
+                    val i = e[0]
+                    val l = EpisodeList.find { EpisodeLists.episode eq i.id }.toList()
+                    val list = arrayListOf<EpListInfo>()
+                    for (j in l) {
+                        list += EpListInfo(j.name, j.url)
                     }
+                    episode = EpisodeApiInfo(
+                        i.name,
+                        i.image,
+                        i.url,
+                        i.description,
+                        list
+                    )
                 }
                 call.respond(mapOf("EpisodeInfo" to episode))
             }
+            get("/r{type}") {
+                when(call.parameters["type"]!!) {
+                    "c" -> Source.RECENT_CARTOON
+                    "a" -> Source.RECENT_ANIME
+                    "l" -> Source.RECENT_LIVE_ACTION
+                    else -> null
+                }?.let {
+                    val s = ShowApi(it).showInfoList
+                    call.respond(mapOf("shows" to synchronized(s) { s.toList() }))
+                }
+            }
         }
         route("/") {
-            get("/shows") {
-                call.respond(FreeMarkerContent("index.ftl", mapOf("data" to listOf<ShowInfo>())))
-            }
-            post("/shows") {
-                val post = call.receiveParameters()
-                val type = post["show_type"]!!
-                val url = post["show_name"]!!
-
-                var list = listOf<Show>()
-                transaction(db) {
-                    debug = false
-                    val s = Shows.select { Shows.name like "%$url%" }.toList()
-                    for (i in s) {
-
-                    }
-                    prettyLog(s.joinToString { "$it\n" })
-                    list = Show.all().toList()
-                }
-
-                val source = when {
-                    type.contains("ls") -> "putlocker"
-                    type.contains("as") -> "gogoanime"
-                    type.contains("cs") -> "animetoon"
-                    else -> ""
-                }
-
-                val filtered = if (url.isEmpty()) list else list.filter { it.name.contains(url) }
-                val filtered2 = if (source.isNotEmpty()) filtered.filter { it.url.contains(source) } else filtered
-
-                call.respond(FreeMarkerContent("index.ftl", mapOf("data" to filtered2.toList()), ""))
-            }
             get {
+                call.respond(FreeMarkerContent("boottabletwo.ftl", null))
+            }
+            get("/old") {
                 var list = listOf<Show>()
                 transaction(db) {
-                    list = Show.all().toList()
+                    list = Show.all().sortedBy { it.name }
                 }
                 call.respond(
                     FreeMarkerContent(
@@ -412,14 +313,14 @@ fun getAllShowsAndEpisodes(db: Database) = GlobalScope.launch {
     }
 }
 
-fun addNewShow(db: Database, show: ShowInfo)  {
+fun addNewShow(db: Database, show: ShowInfo) {
     transaction(db) {
-        val s = Shows.insert {
-            it[name] = show.name
-            it[url] = show.url
-        } get Shows.id
         try {
             val episodeApi = EpisodeApi(show, 30000)
+            val s = Shows.insert {
+                it[name] = episodeApi.name
+                it[url] = show.url
+            } get Shows.id
             val e = Episode.newEpisodes(s, episodeApi)
             val epl = episodeApi.episodeList
             for (li in epl) {
@@ -438,9 +339,7 @@ fun addNewShow(db: Database, show: ShowInfo)  {
 fun updateShows(db: Database) = GlobalScope.launch {
     transaction(db) {
 
-        SchemaUtils.create(Shows, Episodes, EpisodeLists)
-
-        val list = ShowApi.getAllRecent().sortedBy { it.name }
+        val list = ShowApi.getAllRecent()
 
         for ((j, i) in list.withIndex()) {
             val s = Show.find { Shows.url eq i.url }.toList()
@@ -453,10 +352,12 @@ fun updateShows(db: Database) = GlobalScope.launch {
                 val e = Episode.find { Episodes.show eq s[0].id }.toList()[0]
                 val epl = episodeApi.episodeList
                 for (li in epl) {
-                    EpisodeLists.insert {
-                        it[name] = li.name
-                        it[url] = li.url
-                        it[episode] = e.id
+                    if (EpisodeList.find { EpisodeLists.url eq li.url }.empty()) {
+                        EpisodeLists.insert {
+                            it[name] = li.name
+                            it[url] = li.url
+                            it[episode] = e.id
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -625,7 +526,8 @@ enum class Source(val link: String, val recent: Boolean = false, var movie: Bool
     RECENT_ANIME("https://www.gogoanime1.com/home/latest-episodes", true),
     RECENT_CARTOON("http://www.animetoon.org/updates", true),
     LIVE_ACTION("https://www.putlocker.fyi/a-z-shows/"),
-    RECENT_LIVE_ACTION("https://www1.putlocker.fyi/recent-episodes/", true);
+    RECENT_LIVE_ACTION("https://www1.putlocker.fyi/recent-episodes/", true),
+    LIVE_ACTION_MOVIES("https://www1.putlocker.fyi/a-z-movies/", movie = true);
 
     companion object SourceUrl {
         fun getSourceFromUrl(url: String): Source? {
@@ -697,12 +599,31 @@ class ShowApi(private val source: Source) {
             else
                 gogoAnimeAll()
         } else if (source.link.contains("putlocker")) {
-            val d = doc.select("a.az_ls_ent")
-            val listOfShows = arrayListOf<ShowInfo>()
-            for (i in d) {
-                listOfShows += ShowInfo(i.text(), i.attr("abs:href"))
+            if (source.movie) {
+                //TODO: In order for this to work, you have to go through the entire alphabet
+                val page = doc.allElements.select("li.page-item")
+                val lastPage = page[page.size - 2].text().toInt()
+                val list = arrayListOf<ShowInfo>()
+                fun getMovieFromPage(document: Document) {
+                    val listOfStuff = document.allElements.select("div.col-6")
+                    for (i in listOfStuff) {
+                        val url = i.select("a.thumbnail").attr("abs:href")
+                        list.add(ShowInfo(url, i.select("span.mov_title").text()))
+                    }
+                }
+                getMovieFromPage(doc)
+                for (i in 2..lastPage) {
+                    getMovieFromPage(Jsoup.connect(Source.LIVE_ACTION_MOVIES.link + "page/$i").get())
+                }
+                list
+            } else {
+                val d = doc.select("a.az_ls_ent")
+                val listOfShows = arrayListOf<ShowInfo>()
+                for (i in d) {
+                    listOfShows += ShowInfo(i.text(), i.attr("abs:href"))
+                }
+                listOfShows
             }
-            listOfShows
         } else {
             val lists = doc.allElements
             val listOfStuff = lists.select("td").select("a[href^=http]")
@@ -755,7 +676,7 @@ class ShowApi(private val source: Source) {
             val list = arrayListOf<ShowInfo>()
             for (i in listOfStuff) {
                 val url = i.select("a.thumbnail").attr("abs:href")
-                list.add(ShowInfo(url.substring(0, url.indexOf("season")), i.select("span.mov_title").text()))
+                list.add(ShowInfo(i.select("span.mov_title").text(), url.substring(0, url.indexOf("season"))))
             }
             list
         } else {
