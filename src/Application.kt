@@ -199,7 +199,7 @@ fun Application.module() {
                 val list = arrayListOf<ShowInfo>()
                 transaction(db) {
                     Show.all().sortedBy { it.name }.forEach {
-                        list+=ShowInfo(it.name, it.url)
+                        list += ShowInfo(it.name, it.url)
                     }
                 }
                 call.respond(list)
@@ -208,7 +208,7 @@ fun Application.module() {
                 val list = arrayListOf<ShowInfo>()
                 transaction(db) {
                     Show.all().sortedBy { it.name }.forEach {
-                        list+=ShowInfo(it.name, it.url)
+                        list += ShowInfo(it.name, it.url)
                     }
                 }
                 call.respond(mapOf("Shows" to list))
@@ -257,7 +257,7 @@ fun Application.module() {
                 call.respond(mapOf("EpisodeInfo" to episode))
             }
             get("/r{type}.json") {
-                when(call.parameters["type"]!!) {
+                when (call.parameters["type"]!!) {
                     "c" -> Source.RECENT_CARTOON
                     "a" -> Source.RECENT_ANIME
                     "l" -> Source.RECENT_LIVE_ACTION
@@ -329,6 +329,49 @@ fun getAllShowsAndEpisodes(db: Database) = GlobalScope.launch {
                         it[name] = li.name
                         it[url] = li.url
                         it[episode] = e
+                    }
+                }
+            } catch (e: Exception) {
+                continue
+            }
+
+        }
+    }
+}
+
+fun createEverything(db: Database) = GlobalScope.launch {
+
+    transaction(db) {
+
+        SchemaUtils.create(Shows, Episodes, EpisodeLists)
+
+        val list = ShowApi.getAll().sortedBy { it.name }
+
+        for ((j, i) in list.withIndex()) {
+
+            val s = if (Show.find { Shows.url eq i.url }.empty()) {
+                Shows.insertAndGetId {
+                    it[name] = i.name
+                    it[url] = i.url
+                }
+            } else {
+                Show.find { Shows.url eq i.url }.toList()[0].id
+            }
+            try {
+                val episodeApi = EpisodeApi(i, 30000)
+                val e = if(Episode.find { Episodes.show eq s }.empty()) {
+                    Episode.newEpisodes(s, episodeApi)
+                } else {
+                    Episode.find { Episodes.show eq s }.toList()[0].id
+                }
+                val epl = episodeApi.episodeList
+                for (li in epl) {
+                    if(EpisodeList.find { EpisodeLists.url eq li.url }.empty()) {
+                        EpisodeLists.insert {
+                            it[name] = li.name
+                            it[url] = li.url
+                            it[episode] = e
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -1185,11 +1228,11 @@ class VideoLinkApi(val url: String) {
     fun getVideoLink(): String {
         if (url.contains("putlocker")) {
             val firstHtml = getHtml(url)
-            if(firstHtml!=null) {
+            if (firstHtml != null) {
                 val d = "<iframe[^>]+src=\"([^\"]+)\"[^>]*><\\/iframe>".toRegex().toPattern().matcher(firstHtml)
                 if (d.find()) {
                     val secondHtml = getHtml(d.group(1)!!)
-                    if(secondHtml!=null) {
+                    if (secondHtml != null) {
                         val a = "<p[^>]+id=\"videolink\">([^>]*)<\\/p>".toRegex().toPattern().matcher(secondHtml)
                         if (a.find()) {
                             return "https://verystream.com/gettoken/${a.group(1)!!}?mime=true"
@@ -1206,7 +1249,7 @@ class VideoLinkApi(val url: String) {
             return doc.select("a[download^=http]").attr("abs:download")
         } else {
             val episodeHtml = getHtml(url)
-            if(episodeHtml!=null) {
+            if (episodeHtml != null) {
                 val matcher = "<iframe src=\"([^\"]+)\"[^<]+<\\/iframe>".toRegex().toPattern().matcher(episodeHtml)
                 val list = arrayListOf<String>()
                 while (matcher.find()) {
@@ -1214,7 +1257,7 @@ class VideoLinkApi(val url: String) {
                 }
 
                 val videoHtml = getHtml(list[0])
-                if(videoHtml!=null) {
+                if (videoHtml != null) {
                     val reg = "var video_links = (\\{.*?\\});".toRegex().toPattern().matcher(videoHtml)
                     if (reg.find()) {
                         val d = reg.group(1)
@@ -1231,6 +1274,7 @@ class VideoLinkApi(val url: String) {
         }
         return ""
     }
+
     @Throws(IOException::class)
     private fun getHtml(url: String): String? {
         try {
@@ -1258,7 +1302,7 @@ class VideoLinkApi(val url: String) {
             in1.close()
 
             return html.toString()
-        } catch(e: SocketTimeoutException) {
+        } catch (e: SocketTimeoutException) {
             return null
         }
     }
