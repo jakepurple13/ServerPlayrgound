@@ -17,13 +17,26 @@
           grid-template-areas: "cover title title title" "cover description description description" "episodelist episodelist episodelist episodelist" "episodelist episodelist episodelist episodelist" "episodelist episodelist episodelist episodelist";
         }
 
-        .cover { grid-area: cover; }
+        .cover {
+            grid-area: cover;
+            background-size: cover;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+         }
 
         .title { grid-area: title; }
 
         .description { grid-area: description; }
 
         .episodelist { grid-area: episodelist; }
+
+        .cover img {
+            flex-shrink: 0;
+            min-width: 100%;
+            min-height: 100%;
+        }
 
     </style>
 </head>
@@ -38,7 +51,7 @@
             <p>${data.description}</p>
         </div>
         <div class="cover">
-            <img id="cover_image" src="clear.gif">
+            <img class="imagecover" id="cover_image" src="clear.gif">
         </div>
 
         <div class="episodelist">
