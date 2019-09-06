@@ -9,91 +9,76 @@
             <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.3/css/all.css" integrity="sha384-UHRtZLI+pbxtHCWp1t77Bi1L4ZtiqrqD80Kn4Z8NTSRyMA2Fd33n5dQ8lWUE00s/" crossorigin="anonymous">
             <link rel="stylesheet" href="https://unpkg.com/bootstrap-table@1.15.4/dist/bootstrap-table.min.css">
     <style>
-        * {
-            box-sizing: border-box;
+
+        .grid-container {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr 1fr;
+          grid-template-rows: 0.5fr 1fr 1fr 1fr 1fr;
+          grid-template-areas: "cover title title title" "cover description description description" "episodelist episodelist episodelist episodelist" "episodelist episodelist episodelist episodelist" "episodelist episodelist episodelist episodelist";
         }
 
-        #myInput {
-            background-image: url('/css/searchicon.png');
-            background-position: 10px 10px;
-            background-repeat: no-repeat;
-            width: 100%;
-            font-size: 16px;
-            padding: 12px 20px 12px 40px;
-            border: 1px solid #ddd;
-            margin-bottom: 12px;
-        }
+        .cover { grid-area: cover; }
 
-        #myTable {
-            border-collapse: collapse;
-            width: 100%;
-            border: 1px solid #ddd;
-            font-size: 18px;
-        }
+        .title { grid-area: title; }
 
-        #myTable th,
-        #myTable td {
-            text-align: left;
-            padding: 12px;
-        }
+        .description { grid-area: description; }
 
-        #myTable tr {
-            border-bottom: 1px solid #ddd;
-        }
+        .episodelist { grid-area: episodelist; }
 
-        #myTable tr.header,
-        #myTable tr:hover {
-            background-color: #f1f1f1;
-        }
     </style>
 </head>
 
 <body>
+   <div class="grid-container">
+        <div class="title">
+            <h2>${data.name}</h2>
+            <p><a href="${data.url}">${data.url}</a></p>
+        </div>
+        <div class="description">
+            <p>${data.description}</p>
+        </div>
+        <div class="cover">
+            <img id="cover_image" src="clear.gif">
+        </div>
 
-    <h2>${data.name}</h2>
+        <div class="episodelist">
+            <div id="toolbar">
 
-    <p>${data.description}</p>
-
-    <p><a href="${data.url}">${data.url}</a></p>
-
-    <img id="cover_image" src="clear.gif">
-
-<div id="toolbar">
-
-</div>
-    <table data-toggle="table"
-        data-toolbar="#toolbar"
-        class="table-dark table-fixed"
-        data-search="true"
-        data-show-jump-to="true"
-        id="table"
-        data-height="750"
-        data-pagination="true"
-        data-page-list="[10, 25, 50, 100, all]">
-        <thead>
-        <tr class="header">
-            <th data-field="name" data-width="300">Episode Name</th>
-            <th data-field="url" data-width="300">Url</th>
-            <th data-field="vidurl" data-width="300">Video Link</th>
-        </tr>
-        </thead>
-        <tbody>
-        <#list data.episodeList as i>
-            <tr>
-                <td>${i.name}</td>
-                <td><a href="${i.url}">${i.url}</a></td>
-                <td><button class="btn btn-primary" id="vidlink${i?index}" value="${i.url}" onclick="getVidLink(${i?index})">Get Video Link</button><br><a target="_blank" id="showlink${i?index}">Link Will Be Here</a></td>
+            </div>
+        <table data-toggle="table"
+            data-toolbar="#toolbar"
+            class="table-dark table-fixed"
+            data-search="true"
+            data-show-jump-to="true"
+            id="table"
+            data-height="750"
+            data-pagination="true"
+            data-page-list="[10, 25, 50, 100, all]">
+            <thead>
+            <tr class="header">
+                <th data-field="name" data-width="300">Episode Name</th>
+                <th data-field="url" data-width="300">Url</th>
+                <th data-field="vidurl" data-width="300">Video Link</th>
             </tr>
-        </#list>
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+            <#list data.episodeList as i>
+                <tr>
+                    <td>${i.name}</td>
+                    <td><a href="${i.url}">${i.url}</a></td>
+                    <td><button class="btn btn-primary" id="vidlink${i?index}" value="${i.url}" onclick="getVidLink(${i?index})">Get Video Link</button><br><a target="_blank" id="showlink${i?index}">Link Will Be Here</a></td>
+                </tr>
+            </#list>
+            </tbody>
+        </table>
+         </div>
 
-    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js" integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut" crossorigin="anonymous"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
-    <script src="https://unpkg.com/bootstrap-table@1.15.4/dist/bootstrap-table.min.js"></script>
-    <script src="https://unpkg.com/bootstrap-table@1.15.4/dist/extensions/page-jump-to/bootstrap-table-page-jump-to.min.js"></script>
-
+        <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js" integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut" crossorigin="anonymous"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
+        <script src="https://unpkg.com/bootstrap-table@1.15.4/dist/bootstrap-table.min.js"></script>
+        <script src="https://unpkg.com/bootstrap-table@1.15.4/dist/extensions/page-jump-to/bootstrap-table-page-jump-to.min.js"></script>
+    </div>
 </body>
 <script>
         function getVidLink(num) {
