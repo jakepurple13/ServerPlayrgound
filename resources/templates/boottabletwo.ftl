@@ -38,6 +38,7 @@
             id="table"
             data-toolbar="#toolbar"
             data-search="true"
+            data-custom-search="customSearch"
             data-show-jump-to="true"
             data-advanced-search="true"
             data-id-table="advancedTable"
@@ -45,24 +46,15 @@
             data-virtual-scroll="true"
             data-click-to-select="true"
             data-pagination="true"
+            data-url="/api/all.json"
             data-page-list="[10, 25, 50, 100, all]"
             data-show-refresh="true">
             <thead>
                 <tr>
-                    <th data-field="id" data-sortable="true">#</th>
                     <th data-field="name">Name</th>
                     <th data-field="url">URL</th>
                 </tr>
             </thead>
-            <tbody>
-                <#list 0..data?size-1 as i>
-                    <tr>
-                        <td>${i}</td>
-                        <td>${data[i].name}</td>
-                        <td>${data[i].url}</td>
-                    </tr>
-                </#list>
-            </tbody>
         </table>
 
         <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
@@ -79,7 +71,7 @@
             onClickRow: function(row, element, field) {
                 var type = "";
                 console.log(element[0]);
-                var u = element[0].cells[2].innerHTML;
+                var u = element[0].cells[1].innerHTML;
 
                 if (u.includes("gogoanime")) {
                     type = "g";
@@ -98,6 +90,12 @@
             var d = document.getElementsByTagName('tr');
             d[Math.floor(Math.random() * d.length - 1)].cells[0].dispatchEvent(new Event('click'));
         });
+
+        function customSearch(data, text) {
+            return data.filter(function (row) {
+              return row.name.toLowerCase().indexOf(text.toLowerCase()) > -1
+            })
+          }
     </script>
 
 </html>

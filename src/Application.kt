@@ -185,8 +185,30 @@ fun Application.module() {
                 )
             }
         }
-        route("/api/nsi/{name}") {
+        //TODO: Make api about
+        route("/api") {
             get {
+
+            }
+            get("/all.json") {
+                val list = arrayListOf<ShowInfo>()
+                transaction(db) {
+                    Show.all().sortedBy { it.name }.forEach {
+                        list+=ShowInfo(it.name, it.url)
+                    }
+                }
+                call.respond(list)
+            }
+            get("/userAll.json") {
+                val list = arrayListOf<ShowInfo>()
+                transaction(db) {
+                    Show.all().sortedBy { it.name }.forEach {
+                        list+=ShowInfo(it.name, it.url)
+                    }
+                }
+                call.respond(mapOf("Shows" to list))
+            }
+            get("/nsi/{name}") {
                 val name = call.parameters["name"]!!
 
                 data class EpListInfo(val name: String, val url: String)
