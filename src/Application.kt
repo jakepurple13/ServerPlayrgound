@@ -190,6 +190,11 @@ fun Application.module() {
             get {
 
             }
+            get("/video/{url}.json") {
+                val url = call.parameters["url"]!!
+                val vla = VideoLinkApi(url.replace("_", "/")).getVideoLink()
+                call.respond(mapOf("VideoLink" to vla))
+            }
             get("/all.json") {
                 val list = arrayListOf<ShowInfo>()
                 transaction(db) {
@@ -208,7 +213,7 @@ fun Application.module() {
                 }
                 call.respond(mapOf("Shows" to list))
             }
-            get("/nsi/{name}") {
+            get("/nsi/{name}.json") {
                 val name = call.parameters["name"]!!
 
                 data class EpListInfo(val name: String, val url: String)
@@ -232,8 +237,7 @@ fun Application.module() {
                 transaction(db) {
                     val e = Episode.find {
                         Episodes.url like "%$source%" and (Episodes.url like "%${name.substring(
-                            1,
-                            name.indexOf(".json")
+                            1
                         )}%")
                     }.toList()
                     val i = e[0]
@@ -252,7 +256,7 @@ fun Application.module() {
                 }
                 call.respond(mapOf("EpisodeInfo" to episode))
             }
-            get("/r{type}") {
+            get("/r{type}.json") {
                 when(call.parameters["type"]!!) {
                     "c" -> Source.RECENT_CARTOON
                     "a" -> Source.RECENT_ANIME
@@ -1174,6 +1178,89 @@ class EpisodeInfo(name: String, url: String) : ShowInfo(name, url) {
 
     override fun toString(): String {
         return "$name: $url"
+    }
+}
+
+class VideoLinkApi(val url: String) {
+    fun getVideoLink(): String {
+        if (url.contains("putlocker")) {
+            val firstHtml = getHtml(url)
+            if(firstHtml!=null) {
+                val d = "<iframe[^>]+src=\"([^\"]+)\"[^>]*><\\/iframe>".toRegex().toPattern().matcher(firstHtml)
+                if (d.find()) {
+                    val secondHtml = getHtml(d.group(1)!!)
+                    if(secondHtml!=null) {
+                        val a = "<p[^>]+id=\"videolink\">([^>]*)<\\/p>".toRegex().toPattern().matcher(secondHtml)
+                        if (a.find()) {
+                            return "https://verystream.com/gettoken/${a.group(1)!!}?mime=true"
+                        }
+                    } else {
+                        return "Unable to get"
+                    }
+                }
+            } else {
+                return "Unable to get"
+            }
+        } else if (url.contains("gogoanime")) {
+            val doc = Jsoup.connect(url).get()
+            return doc.select("a[download^=http]").attr("abs:download")
+        } else {
+            val episodeHtml = getHtml(url)
+            if(episodeHtml!=null) {
+                val matcher = "<iframe src=\"([^\"]+)\"[^<]+<\\/iframe>".toRegex().toPattern().matcher(episodeHtml)
+                val list = arrayListOf<String>()
+                while (matcher.find()) {
+                    list.add(matcher.group(1)!!)
+                }
+
+                val videoHtml = getHtml(list[0])
+                if(videoHtml!=null) {
+                    val reg = "var video_links = (\\{.*?\\});".toRegex().toPattern().matcher(videoHtml)
+                    if (reg.find()) {
+                        val d = reg.group(1)
+                        val g = Gson()
+                        val d1 = g.fromJson(d, NormalLink::class.java)
+
+                        return d1.normal!!.storage!![0].link!!
+                    }
+                } else {
+                    return "Unable to get"
+                }
+            }
+            return "Unable to get"
+        }
+        return ""
+    }
+    @Throws(IOException::class)
+    private fun getHtml(url: String): String? {
+        try {
+            // Build and set timeout values for the request.
+            val connection = URL(url).openConnection()
+            connection.connectTimeout = 5000
+            connection.readTimeout = 5000
+            connection.setRequestProperty(
+                "User-Agent",
+                "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0"
+            )
+            connection.addRequestProperty("Accept-Language", "en-US,en;q=0.5")
+            connection.addRequestProperty("Referer", "http://thewebsite.com")
+            connection.connect()
+
+            // Read and store the result line by line then return the entire string.
+            val in1 = connection.getInputStream()
+            val reader = BufferedReader(InputStreamReader(in1))
+            val html = StringBuilder()
+            var line: String? = ""
+            while (line != null) {
+                line = reader.readLine()
+                html.append(line)
+            }
+            in1.close()
+
+            return html.toString()
+        } catch(e: SocketTimeoutException) {
+            return null
+        }
     }
 }
 
