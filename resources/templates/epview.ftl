@@ -51,7 +51,7 @@
             <p>${data.description}</p>
         </div>
         <div class="cover">
-            <img class="imagecover" id="cover_image" src="clear.gif">
+            <img class="imagecover" id="cover_image" src="${data.image}">
         </div>
 
         <div class="episodelist">
@@ -116,7 +116,7 @@
             return this.replace(new RegExp(str1.replace(/([\/\,\!\\\^\$\{\}\[\]\(\)\.\*\+\?\|\<\>\-\&])/g,"\\$&"),(ignore?"gi":"g")),(typeof(str2)=="string")?str2.replace(/\$/g,"$$$$"):str2);
         }
 
-        function loadImage(imageUrl) {
+        /*function loadImage(imageUrl) {
             var image = document.getElementById("cover_image");
             var downloadingImage = new Image();
             downloadingImage.onload = function(){
@@ -124,7 +124,7 @@
             };
             downloadingImage.src = imageUrl;
         }
-        loadImage("${data.image}");
+        loadImage("${data.image}");*/
 </script>
 
 </html>

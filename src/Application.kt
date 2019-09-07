@@ -18,6 +18,7 @@ import io.ktor.auth.principal
 import io.ktor.features.CORS
 import io.ktor.features.ContentNegotiation
 import io.ktor.features.StatusPages
+import io.ktor.features.origin
 import io.ktor.freemarker.FreeMarker
 import io.ktor.freemarker.FreeMarkerContent
 import io.ktor.html.respondHtml
@@ -58,7 +59,7 @@ import kotlin.collections.ArrayList
 fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
 private const val dbPath =
-    "/Users/jrein/Downloads/kotlin-examples-master/tutorials/mpp-iOS-Android/servertesting/resources/database/takeeight.db"
+    "/Users/jakerein/IdeaProjects/ServerPlayrgound/resources/database/takeeight.db"
 
 object DbSettings {
     val db by lazy {
@@ -143,6 +144,7 @@ fun Application.module() {
         }
         route("/nsi/{name}") {
             get {
+                prettyLog(call.request.origin.remoteHost)
                 val name = call.parameters["name"]!!
 
                 data class EpisodeApiInfo(
@@ -271,6 +273,7 @@ fun Application.module() {
         }
         route("/") {
             get {
+                prettyLog(call.request.origin.remoteHost)
                 call.respond(FreeMarkerContent("boottabletwo.ftl", null))
             }
             get("/old") {
