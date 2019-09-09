@@ -20,7 +20,10 @@ function connect() {
     // We set a handler upon connection.
     // What this does is to put a text in the messages container notifying about this event.
     socket.onopen = function() {
-        write("Connected");
+        console.log("Connected");
+        var connected = "{\"user\":{\"name\":\"Server\",\"image\":\"https://www.w3schools.com/w3images/bandmember.jpg\"},\"message\":\"Connected\",\"type\":\"SERVER\"}"
+        //write("Connected");
+        write(connected);
     };
 
     // If the connection was closed gracefully (either normally or with a reason from the server),
@@ -72,7 +75,11 @@ function write(message) {
     line.innerHTML = message;*/
     var obj = JSON.parse(message);
     var div = document.createElement("div");
-    div.className = "container darker";
+    if(obj.type=="MESSAGE") {
+        div.className = "container darker";
+    } else if(obj.type=="SERVER") {
+        div.className = "container";
+    }
     var img = document.createElement("img");
     img.src = obj.user.image;
     img.style = "width:100%;";

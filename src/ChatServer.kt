@@ -3,6 +3,8 @@ package com.example
 import com.google.gson.Gson
 import io.ktor.http.cio.websocket.*
 import kotlinx.coroutines.channels.*
+import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.transactions.transaction
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.*
@@ -57,6 +59,9 @@ class ChatServer {
         // Only when joining the first socket for a member notifies the rest of the users.
         if (list.size == 1) {
             //broadcast("server", "Member joined: $name.")
+            val text = "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} Connected"
+            val sendMessage = SendMessage(ChatUser("Server"), text, MessageType.SERVER)
+            members[member]?.send(Frame.Text(sendMessage.toJson()))
         }
 
         // Sends the user the latest messages from this server to let the member have a bit context.
@@ -69,7 +74,7 @@ class ChatServer {
     /**
      * Handles a [member] idenitified by its session id renaming [to] a specific name.
      */
-    suspend fun memberRenamed(member: String, to: String) {
+    fun memberRenamed(member: String, to: String) {
         // Re-sets the member name.
         //val oldName = memberNames.put(member, to) ?: member
         memberNames[member]?.name = to
@@ -77,14 +82,10 @@ class ChatServer {
         //broadcast("server", "Member renamed from $member to $to")
     }
 
-    suspend fun getShow() {
-
-    }
-
     /**
      * Handles a [member] idenitified by its session id renaming [to] a specific name.
      */
-    suspend fun memberImageChange(member: String, newImage: String) {
+    fun memberImageChange(member: String, newImage: String) {
         // Re-sets the member name.
         //val oldName = memberNames.put(member, to) ?: member
         memberNames[member]?.image = newImage
@@ -103,8 +104,8 @@ class ChatServer {
         // If no more sockets are connected for this member, let's remove it from the server
         // and notify the rest of the users about this event.
         if (connections != null && connections.isEmpty()) {
-            val name = memberNames.remove(member) ?: member
-            broadcast("server", "Member left: $name.")
+            val name = memberNames.remove(member)?.name ?: member
+            broadcast("server", "Member left: $name.", MessageType.SERVER)
         }
     }
 
@@ -112,14 +113,36 @@ class ChatServer {
      * Handles the 'who' command by sending the member a list of all all members names in the server.
      */
     suspend fun who(sender: String) {
-        members[sender]?.send(Frame.Text(memberNames.values.joinToString(prefix = "[server::who] ")))
+        val text =
+            "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} ${memberNames.values.joinToString(
+                prefix = "[server::who] "
+            ) { it.name }}"
+        val sendMessage = SendMessage(ChatUser("Server"), text, MessageType.SERVER)
+        members[sender]?.send(Frame.Text(sendMessage.toJson()))
+        //members[sender]?.send(Frame.Text(memberNames.values.joinToString(prefix = "[server::who] ")))
+        /*broadcast(
+            sender,
+            memberNames.values.joinToString(prefix = "[server::who] ") { it.name },
+            MessageType.SERVER,
+            sender
+        )*/
     }
 
     /**
      * Handles the 'help' command by sending the member a list of available commands.
      */
     suspend fun help(sender: String) {
-        members[sender]?.send(Frame.Text("[server::help] Possible commands are: /user, /help, /me and /who"))
+        val text =
+            "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} [server::help] Possible commands are: /user, /help, /me and /who"
+        val sendMessage = SendMessage(ChatUser("Server"), text, MessageType.SERVER)
+        members[sender]?.send(Frame.Text(sendMessage.toJson()))
+        //members[sender]?.send(Frame.Text("[server::help] Possible commands are: /user, /help, /me and /who"))
+        /*broadcast(
+            sender,
+            "[server::help] Possible commands are: /user, /help, /me and /who",
+            MessageType.SERVER,
+            sender
+        )*/
     }
 
     /**
@@ -128,7 +151,20 @@ class ChatServer {
      * Both [recipient] and [sender] are identified by its session-id.
      */
     suspend fun sendTo(recipient: String, sender: String, message: String) {
-        members[recipient]?.send(Frame.Text("[$sender] $message"))
+        val text = "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} $message"
+        val sendMessage = SendMessage(memberNames[sender] ?: ChatUser(sender), text, MessageType.MESSAGE)
+        members[recipient]?.send(Frame.Text(sendMessage.toJson()))
+        //members[recipient]?.send(Frame.Text("[$sender] $message"))
+        //broadcast(sender, message, MessageType.MESSAGE, recipient)
+    }
+
+    suspend fun getShow(db: Database, showToSearch: String, sender: String) {
+        var s: List<ShowInfo>
+        transaction(db) {
+            val s = Show.find { Shows.name eq showToSearch }.map { ShowInfo(it.name, it.url) }
+
+        }
+        //broadcast()
     }
 
     /**
@@ -140,7 +176,7 @@ class ChatServer {
         val formatted = "[$name] $message"
 
         // Sends this pre-formatted message to all the members in the server.
-        broadcast(sender, formatted)
+        broadcast(sender, formatted, MessageType.MESSAGE)
 
         // Appends the message to the list of [lastMessages] and caps that collection to 100 items to prevent
         // growing too much.
@@ -161,7 +197,7 @@ class ChatServer {
         val formatted = "<i>$name $message</i>"
 
         // Sends this pre-formatted message to all the members in the server.
-        broadcast(sender, formatted)
+        broadcast(sender, formatted, MessageType.MESSAGE)
 
         // Appends the message to the list of [lastMessages] and caps that collection to 100 items to prevent
         // growing too much.
@@ -173,7 +209,21 @@ class ChatServer {
         }
     }
 
-    data class SendMessage(val user: ChatUser, val message: String)
+    enum class MessageType {
+        MESSAGE, EPISODE, SERVER
+    }
+
+    data class SendMessage(val user: ChatUser, val message: String, val type: MessageType?, val data: String? = null) {
+        fun toJson(): String = Gson().toJson(this)
+    }
+
+    suspend fun sendServerMessage(msg: String) {
+        broadcast(SendMessage(
+            ChatUser("Server"),
+            "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} $msg",
+            MessageType.SERVER
+        ).toJson())
+    }
 
     /**
      * Sends a [message] to all the members in the server, including all the connections per member.
@@ -185,13 +235,25 @@ class ChatServer {
     }
 
     /**
+     * Sends a [message] to all the members in the server, including all the connections per member.
+     */
+    private suspend fun broadcast(message: String, recipient: String) {
+        members[recipient]?.send(Frame.Text(message))
+    }
+
+    /**
      * Sends a [message] coming from a [sender] to all the members in the server, including all the connections per member.
      */
-    private suspend fun broadcast(sender: String, message: String) {
+    private suspend fun broadcast(
+        sender: String,
+        message: String,
+        type: MessageType = MessageType.MESSAGE,
+        data: String? = null
+    ) {
         //val name = memberNames[sender]?.name ?: sender
         val text = "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} $message"
-        val sendMessage = SendMessage(memberNames[sender] ?: ChatUser("Server"), text)
-        broadcast(Gson().toJson(sendMessage))
+        val sendMessage = SendMessage(memberNames[sender] ?: ChatUser("Server"), text, type, data)
+        broadcast(sendMessage.toJson())
     }
 
     /**

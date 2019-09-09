@@ -237,19 +237,19 @@ fun Application.module() {
                 call.respond(mapOf("VideoLink" to vla))
             }
             get("/all.json") {
-                val list = arrayListOf<ShowInfo>()
+                var list = listOf<ShowInfo>()
                 transaction(db) {
-                    Show.all().sortedBy { it.name }.forEach {
-                        list += ShowInfo(it.name, it.url)
+                    list = Show.all().sortedBy { it.name }.map {
+                        ShowInfo(it.name, it.url)
                     }
                 }
                 call.respond(list)
             }
             get("/userAll.json") {
-                val list = arrayListOf<ShowInfo>()
+                var list = listOf<ShowInfo>()
                 transaction(db) {
-                    Show.all().sortedBy { it.name }.forEach {
-                        list += ShowInfo(it.name, it.url)
+                    list = Show.all().sortedBy { it.name }.map {
+                        ShowInfo(it.name, it.url)
                     }
                 }
                 call.respond(mapOf("Shows" to list))
@@ -283,9 +283,8 @@ fun Application.module() {
                     }.toList()
                     val i = e[0]
                     val l = EpisodeList.find { EpisodeLists.episode eq i.id }.toList()
-                    val list = arrayListOf<EpListInfo>()
-                    for (j in l) {
-                        list += EpListInfo(j.name, j.url)
+                    val list = l.map {
+                        EpListInfo(it.name, it.url)
                     }
                     episode = EpisodeApiInfo(
                         i.name,
