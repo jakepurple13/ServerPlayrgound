@@ -158,13 +158,20 @@ class ChatServer {
         //broadcast(sender, message, MessageType.MESSAGE, recipient)
     }
 
-    suspend fun getShow(db: Database, showToSearch: String, sender: String) {
-        var s: List<ShowInfo>
-        transaction(db) {
-            val s = Show.find { Shows.name eq showToSearch }.map { ShowInfo(it.name, it.url) }
+    data class EpisodeApiInfo(
+        val name: String = "",
+        val image: String = "",
+        val url: String = "",
+        val description: String = ""
+    )
 
+    suspend fun getShow(db: Database, showToSearch: String, sender: String) {
+        var s: List<EpisodeApiInfo> = listOf()
+        transaction(db) {
+            s = Episode.find { Episodes.name like "%$showToSearch%" }.map { EpisodeApiInfo(it.name, it.image, it.url, it.description) }
         }
-        //broadcast()
+        prettyLog(s)
+        broadcast(sender, "Displaying Show: ", MessageType.EPISODE, Gson().toJson(s))
     }
 
     /**

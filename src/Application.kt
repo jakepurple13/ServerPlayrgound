@@ -404,6 +404,10 @@ private suspend fun receivedMessage(id: String, command: String) {
                 else -> server.memberRenamed(id, newName)
             }
         }
+        command.startsWith("/show") -> {
+            val showName = command.removePrefix("/show")
+            server.getShow(DbSettings.db, showName, id)
+        }
         command.startsWith("/image") -> {
             // We strip the command part to get the rest of the parameters.
             // In this case the only parameter is the user's newName.

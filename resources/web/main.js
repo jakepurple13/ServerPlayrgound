@@ -21,9 +21,9 @@ function connect() {
     // What this does is to put a text in the messages container notifying about this event.
     socket.onopen = function() {
         console.log("Connected");
-        var connected = "{\"user\":{\"name\":\"Server\",\"image\":\"https://www.w3schools.com/w3images/bandmember.jpg\"},\"message\":\"Connected\",\"type\":\"SERVER\"}"
+        //var connected = "{\"user\":{\"name\":\"Server\",\"image\":\"https://www.w3schools.com/w3images/bandmember.jpg\"},\"message\":\"Connected\",\"type\":\"SERVER\"}"
         //write("Connected");
-        write(connected);
+        //write(connected);
     };
 
     // If the connection was closed gracefully (either normally or with a reason from the server),
@@ -78,6 +78,8 @@ function write(message) {
     if(obj.type=="MESSAGE") {
         div.className = "container darker";
     } else if(obj.type=="SERVER") {
+        div.className = "container";
+    } else {
         div.className = "container";
     }
     var img = document.createElement("img");
