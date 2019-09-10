@@ -1,5 +1,7 @@
 @file:Suppress("RegExpRedundantEscape")
 
+@file:JvmName("MyApp")
+
 package com.example
 
 import com.auth0.jwt.JWT
