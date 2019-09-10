@@ -25,10 +25,12 @@ object DbSettings {
             "org.h2.Driver"
         )*/
 
-        Database.connect(
+        /*Database.connect(
             "jdbc:h2:$dbPath",
             "org.h2.Driver"
-        )
+        )*/
+
+        Database.connect(System.getenv("JDBC_DATABASE_URL"), driver = "org.postgresql.Driver")
     }
 }
 
