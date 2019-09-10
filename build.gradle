@@ -59,5 +59,5 @@ dependencies {
     compile "org.xerial:sqlite-jdbc:3.21.0.1"
     compile "com.h2database:h2:1.4.197"
     implementation "io.ktor:ktor-websockets:$ktor_version"
-    compile 'org.postgresql:postgresql:42.2.4.jre7'
+    compile 'org.postgresql:postgresql:42.2.6'
 }

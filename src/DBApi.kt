@@ -12,8 +12,8 @@ import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.transactions.transaction
 
-private const val dbPath = "/Users/jrein/Downloads/kotlin-examples-master/tutorials/mpp-iOS-Android/servertesting/resources/database/takeeight.db"
-
+//private const val dbPath = "/Users/jrein/Downloads/kotlin-examples-master/tutorials/mpp-iOS-Android/servertesting/resources/database/takeeight.db"
+private const val dbPath = "resources/database/datatwo.db"
 //private const val dbPath = "/Users/jrein/Downloads/kotlin-examples-master/tutorials/mpp-iOS-Android/servertesting/resources/database/moviesreal.db"
 
 object DbSettings {
@@ -29,8 +29,9 @@ object DbSettings {
             "jdbc:h2:$dbPath",
             "org.h2.Driver"
         )*/
-
-        Database.connect(System.getenv("JDBC_DATABASE_URL"), driver = "org.postgresql.Driver")
+        prettyLog(System.getenv("JDBC_DATABASE_URL"))
+        //Database.connect(System.getenv("JDBC_DATABASE_URL"), driver = "org.postgresql.Driver")
+        Database.connect("jdbc:sqlite:$dbPath", "org.sqlite.JDBC")
     }
 }
 
