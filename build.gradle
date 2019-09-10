@@ -19,6 +19,11 @@ task stage {
     dependsOn installDist
 }
 
+jar {
+    baseName = 'kotlin-getting-started'
+    version = '1.0'
+}
+
 sourceSets {
     main.kotlin.srcDirs = main.java.srcDirs = ['src']
     test.kotlin.srcDirs = test.java.srcDirs = ['test']
