@@ -13,33 +13,18 @@ apply plugin: 'application'
 
 group 'com.example'
 version '0.0.1'
-//mainClassName = "io.ktor.server.netty.EngineMain"
-mainClassName = "com.example.ApplicationKt"
+mainClassName = "io.ktor.server.netty.EngineMain"
+//mainClassName = "com.example.ApplicationKt"
 
 /*task stage {
     dependsOn installDist
 }*/
-task stage(dependsOn: ['build', 'clean'])
-build.mustRunAfter clean
+task stage(dependsOn: ['installDist'])
 
-task copyToLib(type: Copy) {
-    into "$buildDir/libs"
-    from(configurations.compile)
-}
-
-stage.dependsOn(copyToLib)
-
-gradle.taskGraph.whenReady {
-    taskGraph ->
-        if (taskGraph.hasTask(stage)) {
-            test.enabled = false
-        }
-}
-
-jar {
+/*jar {
     baseName = 'kotlin-getting-started'
     version = '1.0'
-}
+}*/
 
 sourceSets {
     main.kotlin.srcDirs = main.java.srcDirs = ['src']
