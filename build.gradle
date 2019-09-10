@@ -22,6 +22,11 @@ group 'com.example'
 version '0.0.1'
 mainClassName = "io.ktor.server.netty.EngineMain"
 
+jar {
+    baseName = 'servertested'
+    version = '1.0'
+}
+
 sourceSets {
     main.kotlin.srcDirs = main.java.srcDirs = ['src']
     test.kotlin.srcDirs = test.java.srcDirs = ['test']
