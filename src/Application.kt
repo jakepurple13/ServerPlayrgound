@@ -59,7 +59,7 @@ fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
 fun Application.module() {
     System.setProperty("https.protocols", "TLSv1.2,TLSv1.1,SSLv3");
-    val db = DbSettings.db
+    //val db = DbSettings.db
 
     GlobalScope.launch {
         //getAllShows(db)
@@ -187,7 +187,7 @@ fun Application.module() {
             }
         }
 
-        route("/nsi/{name}") {
+        /*route("/nsi/{name}") {
             get {
                 prettyLog(call.request.origin.remoteHost)
                 val name = call.parameters["name"]!!
@@ -232,7 +232,7 @@ fun Application.module() {
                     )
                 )
             }
-        }
+        }*/
 
         route("/api") {
             get("/about") {
@@ -244,7 +244,7 @@ fun Application.module() {
                 val vla = VideoLinkApi(url.replace("_", "/")).getVideoLink()
                 call.respond(mapOf("VideoLink" to vla))
             }
-            get("/all.json") {
+            /*get("/all.json") {
                 var list = listOf<ShowInfo>()
                 transaction(db) {
                     list = Show.all().sortedBy { it.name }.map { ShowInfo(it.name, it.url) }
@@ -297,7 +297,7 @@ fun Application.module() {
                     )
                 }
                 call.respond(mapOf("EpisodeInfo" to episode))
-            }
+            }*/
             get("/r{type}.json") {
                 when (call.parameters["type"]!!) {
                     "c" -> Source.RECENT_CARTOON
@@ -310,7 +310,7 @@ fun Application.module() {
                 }
             }
         }
-        route("/updateShows") {
+        /*route("/updateShows") {
             get {
                 val starting = "Running at ${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())}"
                 prettyLog(starting)
@@ -325,7 +325,7 @@ fun Application.module() {
                     }
                 }
             }
-        }
+        }*/
         route("/") {
             get {
                 prettyLog(call.request.origin.remoteHost)
@@ -333,9 +333,9 @@ fun Application.module() {
             }
             get("/old") {
                 var list = listOf<Show>()
-                transaction(db) {
+                /*transaction(db) {
                     list = Show.all().sortedBy { it.name }
-                }
+                }*/
                 call.respond(
                     FreeMarkerContent(
                         "boottable.ftl",
