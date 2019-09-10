@@ -61,5 +61,8 @@ dependencies {
 
 //task run(dependsOn: appengineRun)
 
-task stage(dependsOn: ['build', 'clean'])
-build.mustRunAfter clean
+//task stage(dependsOn: ['build', 'clean'])
+//build.mustRunAfter clean
+task stage {
+    dependsOn installDist
+}
