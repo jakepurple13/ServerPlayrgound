@@ -54,9 +54,11 @@ import java.time.Duration
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.system.measureTimeMillis
-
-fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
-
+open class Application {
+    companion object {
+        @JvmStatic fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
+    }
+}
 fun Application.module() {
     System.setProperty("https.protocols", "TLSv1.2,TLSv1.1,SSLv3");
     val db = DbSettings.db
