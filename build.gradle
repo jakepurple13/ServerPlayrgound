@@ -25,6 +25,9 @@ mainClassName = "io.ktor.server.netty.EngineMain"
 jar {
     baseName = 'servertested'
     version = '1.0'
+    manifest {
+        attributes 'Main-Class': 'io.ktor.server.netty.EngineMain'
+    }
 }
 
 sourceSets {
