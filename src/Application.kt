@@ -68,6 +68,7 @@ fun Application.module() {
         //updateShows(db)
         //val cssGridLayout = "https://grid.layoutit.com/"
         //createEverything(db, ShowApi.getAllMovies())
+        createEverything(db)
         //prettyLog(ShowApi(Source.LIVE_ACTION_MOVIES).showInfoList)
     }
 
