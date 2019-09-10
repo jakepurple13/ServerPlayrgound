@@ -1,15 +1,22 @@
 buildscript {
+
+    ext.appengine_version = '1.9.60'
+    ext.appengine_plugin_version = '1.3.4'
+
     repositories {
         jcenter()
     }
     
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "com.google.cloud.tools:appengine-gradle-plugin:$appengine_plugin_version"
     }
 }
 
 apply plugin: 'kotlin'
+apply plugin: 'war'
 apply plugin: 'application'
+apply plugin: 'com.google.cloud.tools.appengine'
 
 group 'com.example'
 version '0.0.1'
@@ -30,6 +37,7 @@ repositories {
 }
 
 dependencies {
+    providedCompile "com.google.appengine:appengine:$appengine_version"
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "io.ktor:ktor-server-netty:$ktor_version"
     compile "ch.qos.logback:logback-classic:$logback_version"
@@ -49,3 +57,5 @@ dependencies {
     compile "com.h2database:h2:1.4.197"
     implementation "io.ktor:ktor-websockets:$ktor_version"
 }
+
+//task run(dependsOn: appengineRun)
