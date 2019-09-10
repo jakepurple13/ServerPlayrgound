@@ -151,6 +151,9 @@ fun getAllShowsAndEpisodes(db: Database) = GlobalScope.launch {
     }
 }
 
+/**
+ * Use this to get EVERYTHING and store it (except putlocker movies)
+ */
 fun createEverything(db: Database) = GlobalScope.launch {
 
     transaction(db) {

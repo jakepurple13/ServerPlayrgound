@@ -21,6 +21,7 @@ import io.ktor.features.StatusPages
 import io.ktor.features.origin
 import io.ktor.freemarker.FreeMarker
 import io.ktor.freemarker.FreeMarkerContent
+import io.ktor.html.respondHtml
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
@@ -42,11 +43,17 @@ import io.ktor.websocket.webSocket
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
+import kotlinx.html.body
+import kotlinx.html.div
+import kotlinx.html.onClick
+import kotlinx.html.p
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.text.SimpleDateFormat
 import java.time.Duration
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.system.measureTimeMillis
 
 fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
@@ -226,9 +233,10 @@ fun Application.module() {
                 )
             }
         }
-        //TODO: Make api about
+
         route("/api") {
-            get {
+            get("/about") {
+                //TODO: Make api about
 
             }
             get("/video/{url}.json") {
@@ -239,18 +247,14 @@ fun Application.module() {
             get("/all.json") {
                 var list = listOf<ShowInfo>()
                 transaction(db) {
-                    list = Show.all().sortedBy { it.name }.map {
-                        ShowInfo(it.name, it.url)
-                    }
+                    list = Show.all().sortedBy { it.name }.map { ShowInfo(it.name, it.url) }
                 }
                 call.respond(list)
             }
             get("/userAll.json") {
                 var list = listOf<ShowInfo>()
                 transaction(db) {
-                    list = Show.all().sortedBy { it.name }.map {
-                        ShowInfo(it.name, it.url)
-                    }
+                    list = Show.all().sortedBy { it.name }.map { ShowInfo(it.name, it.url) }
                 }
                 call.respond(mapOf("Shows" to list))
             }
@@ -283,9 +287,7 @@ fun Application.module() {
                     }.toList()
                     val i = e[0]
                     val l = EpisodeList.find { EpisodeLists.episode eq i.id }.toList()
-                    val list = l.map {
-                        EpListInfo(it.name, it.url)
-                    }
+                    val list = l.map { EpListInfo(it.name, it.url) }
                     episode = EpisodeApiInfo(
                         i.name,
                         i.image,
@@ -305,6 +307,22 @@ fun Application.module() {
                 }?.let {
                     val s = ShowApi(it).showInfoList
                     call.respond(mapOf("shows" to synchronized(s) { s.toList() }))
+                }
+            }
+        }
+        route("/updateShows") {
+            get {
+                val starting = "Running at ${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())}"
+                prettyLog(starting)
+                val time = measureTimeMillis { updateShows(db).join() }
+                val finished = "Finished after $time at ${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())}"
+                prettyLog(starting + "\n" + finished)
+                call.respondHtml {
+                    body {
+                        p {
+                            +(starting + "\n" + finished)
+                        }
+                    }
                 }
             }
         }
