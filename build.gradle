@@ -20,7 +20,7 @@ apply plugin: 'com.google.cloud.tools.appengine'
 
 group 'com.example'
 version '0.0.1'
-//mainClassName = "io.ktor.server.netty.EngineMain"
+mainClassName = "io.ktor.server.netty.EngineMain"
 
 jar {
     baseName = 'servertested'
