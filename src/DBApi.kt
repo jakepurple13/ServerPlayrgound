@@ -12,9 +12,11 @@ import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.transactions.transaction
 
-private const val dbPath = "/Users/jrein/Downloads/kotlin-examples-master/tutorials/mpp-iOS-Android/servertesting/resources/database/takeeight.db"
+//private const val dbPath = "/Users/jrein/Downloads/kotlin-examples-master/tutorials/mpp-iOS-Android/servertesting/resources/database/takeeight.db"
 
 //private const val dbPath = "/Users/jrein/Downloads/kotlin-examples-master/tutorials/mpp-iOS-Android/servertesting/resources/database/moviesreal.db"
+
+private const val dbPath = "jdbc:postgresql://localhost:5432/java_database_name"
 
 object DbSettings {
     val db by lazy {
@@ -24,10 +26,14 @@ object DbSettings {
             "jdbc:h2:~/resources/database/seert.db",
             "org.h2.Driver"
         )*/
-
-        Database.connect(
+        /*Database.connect(
             "jdbc:h2:$dbPath",
             "org.h2.Driver"
+        )*/
+
+        Database.connect(
+            dbPath,
+            "org.postgresql.Driver"
         )
     }
 }
