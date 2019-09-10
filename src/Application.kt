@@ -36,6 +36,8 @@ import io.ktor.routing.get
 import io.ktor.routing.post
 import io.ktor.routing.route
 import io.ktor.routing.routing
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.netty.Netty
 import io.ktor.sessions.*
 import io.ktor.util.generateNonce
 import io.ktor.websocket.WebSockets
@@ -56,9 +58,312 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.system.measureTimeMillis
 open class Application {
     companion object {
-        @JvmStatic fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
+        @JvmStatic fun main(args: Array<String>): Unit {
+            embeddedServer(Netty,23567) {
+                /*routing {
+                    get("") {
+                        call.respond("I'm alive!")
+                    }
+                    get("hello") {
+                        call.respond(HttpStatusCode.Accepted, "Hello")
+                    }
+                }*/
+                System.setProperty("https.protocols", "TLSv1.2,TLSv1.1,SSLv3");
+                val db = DbSettings.db
+
+                GlobalScope.launch {
+                    //getAllShows(db)
+                    //getAllShowsAndEpisodes(db)
+                    //prettyLog(ShowApi(Source.LIVE_ACTION_MOVIES).showInfoList.joinToString { "$it\n" })
+                    //updateShows(db)
+                    //val cssGridLayout = "https://grid.layoutit.com/"
+                    //createEverything(db, ShowApi.getAllMovies())
+                    //prettyLog(ShowApi(Source.LIVE_ACTION_MOVIES).showInfoList)
+                }
+
+                val simpleJwt = SimpleJWT("my-super-secret-for-jwt")
+                install(CORS) {
+                    method(HttpMethod.Options)
+                    method(HttpMethod.Get)
+                    method(HttpMethod.Post)
+                    method(HttpMethod.Put)
+                    method(HttpMethod.Delete)
+                    method(HttpMethod.Patch)
+                    header(HttpHeaders.Authorization)
+                    allowCredentials = true
+                    anyHost()
+                }
+                install(WebSockets) {
+                    pingPeriod = Duration.ofSeconds(60) // Disabled (null) by default
+                    timeout = Duration.ofSeconds(15)
+                    maxFrameSize = Long.MAX_VALUE // Disabled (max value). The connection will be closed if surpassed this length.
+                    masking = false
+                }
+                install(Sessions) {
+                    cookie<ChatSession>("SESSION")
+                }
+                intercept(ApplicationCallPipeline.Features) {
+                    if (call.sessions.get<ChatSession>() == null) {
+                        call.sessions.set(ChatSession(generateNonce()))
+                    }
+                }
+                install(StatusPages) {
+                    exception<InvalidCredentialsException> { exception ->
+                        call.respond(HttpStatusCode.Unauthorized, mapOf("OK" to false, "error" to (exception.message ?: "")))
+                    }
+                }
+                install(Authentication) {
+                    jwt {
+                        verifier(simpleJwt.verifier)
+                        validate {
+                            UserIdPrincipal(it.payload.getClaim("name").asString())
+                        }
+                    }
+                }
+                install(ContentNegotiation) {
+                    jackson {
+                        enable(SerializationFeature.INDENT_OUTPUT) // Pretty Prints the JSON
+                    }
+                }
+                install(FreeMarker) {
+                    templateLoader = ClassTemplateLoader(this::class.java.classLoader, "templates")
+                }
+                routing {
+                    post("/login-register") {
+                        val post = call.receive<LoginRegister>()
+                        val user = users.getOrPut(post.user) { User(post.user, post.password) }
+                        if (user.password != post.password) throw InvalidCredentialsException("Invalid credentials")
+                        call.respond(mapOf("token" to simpleJwt.sign(user.name)))
+                    }
+                    route("/snippets") {
+                        get {
+                            call.respond(mapOf("snippets" to synchronized(snippets) { snippets.toList() }))
+                        }
+                        authenticate {
+                            post {
+                                val post = call.receive<PostSnippet>()
+                                val principal = call.principal<UserIdPrincipal>() ?: error("No principal")
+                                snippets += Snippet(principal.name, post.snippet.text)
+                                call.respond(mapOf("OK" to true))
+                            }
+                        }
+                    }
+
+                    route("/chat") {
+                        val clients = Collections.synchronizedSet(LinkedHashSet<ChatClient>())
+
+                        webSocket("/ws") {
+                            // this: WebSocketSession ->
+
+                            // First of all we get the session.
+                            val session = call.sessions.get<ChatSession>()
+
+                            // We check that we actually have a session. We should always have one,
+                            // since we have defined an interceptor before to set one.
+                            if (session == null) {
+                                close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "No session"))
+                                return@webSocket
+                            }
+
+                            // We notify that a member joined by calling the server handler [memberJoin]
+                            // This allows to associate the session id to a specific WebSocket connection.
+                            server.memberJoin(session.id, this)
+
+                            try {
+                                // We starts receiving messages (frames).
+                                // Since this is a coroutine. This coroutine is suspended until receiving frames.
+                                // Once the connection is closed, this consumeEach will finish and the code will continue.
+                                incoming.consumeEach { frame ->
+                                    // Frames can be [Text], [Binary], [Ping], [Pong], [Close].
+                                    // We are only interested in textual messages, so we filter it.
+                                    if (frame is Frame.Text) {
+                                        // Now it is time to process the text sent from the user.
+                                        // At this point we have context about this connection, the session, the text and the server.
+                                        // So we have everything we need.
+                                        receivedMessage(session.id, frame.readText())
+                                    }
+                                }
+                            } finally {
+                                // Either if there was an error, of it the connection was closed gracefully.
+                                // We notify the server that the member left.
+                                server.memberLeft(session.id, this)
+                            }
+                        }
+                        static {
+                            // This marks index.html from the 'web' folder in resources as the default file to serve.
+                            defaultResource("chat.html", "web")
+                            // This serves files from the 'web' folder in the application resources.
+                            resources("web")
+                        }
+                    }
+
+                    route("/nsi/{name}") {
+                        get {
+                            prettyLog(call.request.origin.remoteHost)
+                            val name = call.parameters["name"]!!
+
+                            data class EpisodeApiInfo(
+                                val name: String = "",
+                                val image: String = "",
+                                val url: String = "",
+                                val description: String = "",
+                                val episodeList: List<EpisodeList> = emptyList()
+                            )
+
+                            var episode = EpisodeApiInfo()
+
+                            val source = when (name[0]) {
+                                'p' -> "putlocker"
+                                'g' -> "gogoanime"
+                                'a' -> "animetoon"
+                                else -> ""
+                            }
+                            transaction(db) {
+                                try {
+                                    val e = Episode.find {
+                                        Episodes.url like "%$source%" and (Episodes.url like "%${name.substring(1)}%")
+                                    }.toList()
+                                    val list = EpisodeList.find { EpisodeLists.episode eq e[0].id }.toList()
+                                    episode = EpisodeApiInfo(
+                                        e[0].name,
+                                        e[0].image,
+                                        e[0].url,
+                                        e[0].description,
+                                        list
+                                    )
+                                } catch (ignored: Exception) {
+
+                                }
+                            }
+                            call.respond(
+                                FreeMarkerContent(
+                                    "epview.ftl",
+                                    mapOf("data" to episode)
+                                )
+                            )
+                        }
+                    }
+
+                    route("/api") {
+                        get("/about") {
+                            //TODO: Make api about
+
+                        }
+                        get("/video/{url}.json") {
+                            val url = call.parameters["url"]!!
+                            val vla = VideoLinkApi(url.replace("_", "/")).getVideoLink()
+                            call.respond(mapOf("VideoLink" to vla))
+                        }
+                        get("/all.json") {
+                            var list = listOf<ShowInfo>()
+                            transaction(db) {
+                                list = Show.all().sortedBy { it.name }.map { ShowInfo(it.name, it.url) }
+                            }
+                            call.respond(list)
+                        }
+                        get("/userAll.json") {
+                            var list = listOf<ShowInfo>()
+                            transaction(db) {
+                                list = Show.all().sortedBy { it.name }.map { ShowInfo(it.name, it.url) }
+                            }
+                            call.respond(mapOf("Shows" to list))
+                        }
+                        get("/nsi/{name}.json") {
+                            val name = call.parameters["name"]!!
+
+                            data class EpListInfo(val name: String, val url: String)
+                            data class EpisodeApiInfo(
+                                val name: String = "",
+                                val image: String = "",
+                                val url: String = "",
+                                val description: String = "",
+                                val episodeList: List<EpListInfo> = emptyList()
+                            )
+
+                            val source = when (name[0]) {
+                                'p' -> "putlocker"
+                                'g' -> "gogoanime"
+                                'a' -> "animetoon"
+                                else -> ""
+                            }
+
+                            var episode = EpisodeApiInfo()
+
+                            transaction(db) {
+                                val e = Episode.find {
+                                    Episodes.url like "%$source%" and (Episodes.url like "%${name.substring(
+                                        1
+                                    )}%")
+                                }.toList()
+                                val i = e[0]
+                                val l = EpisodeList.find { EpisodeLists.episode eq i.id }.toList()
+                                val list = l.map { EpListInfo(it.name, it.url) }
+                                episode = EpisodeApiInfo(
+                                    i.name,
+                                    i.image,
+                                    i.url,
+                                    i.description,
+                                    list
+                                )
+                            }
+                            call.respond(mapOf("EpisodeInfo" to episode))
+                        }
+                        get("/r{type}.json") {
+                            when (call.parameters["type"]!!) {
+                                "c" -> Source.RECENT_CARTOON
+                                "a" -> Source.RECENT_ANIME
+                                "l" -> Source.RECENT_LIVE_ACTION
+                                else -> null
+                            }?.let {
+                                val s = ShowApi(it).showInfoList
+                                call.respond(mapOf("shows" to synchronized(s) { s.toList() }))
+                            }
+                        }
+                    }
+                    route("/updateShows") {
+                        get {
+                            val starting = "Running at ${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())}"
+                            prettyLog(starting)
+                            val time = measureTimeMillis { updateShows(db).join() }
+                            val finished = "Finished after $time at ${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())}"
+                            prettyLog(starting + "\n" + finished)
+                            call.respondHtml {
+                                body {
+                                    p {
+                                        +(starting + "\n" + finished)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    route("/") {
+                        get {
+                            prettyLog(call.request.origin.remoteHost)
+                            call.respond(FreeMarkerContent("boottabletwo.ftl", null))
+                        }
+                        get("/old") {
+                            var list = listOf<Show>()
+                            transaction(db) {
+                                list = Show.all().sortedBy { it.name }
+                            }
+                            call.respond(
+                                FreeMarkerContent(
+                                    "boottable.ftl",
+                                    mapOf("data" to list)
+                                )
+                            )
+                        }
+                    }
+                    static("/static") {
+                        resources("static")
+                    }
+                }
+            }.start(wait = true)
+            //io.ktor.server.netty.EngineMain.main(args)
+        }
     }
 }
+/*
 fun Application.module() {
     System.setProperty("https.protocols", "TLSv1.2,TLSv1.1,SSLv3");
     val db = DbSettings.db
@@ -351,7 +656,7 @@ fun Application.module() {
         }
     }
 
-}
+}*/
 
 data class PostSnippet(val snippet: PostSnippet.Text) {
     data class Text(val text: String)
