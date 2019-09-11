@@ -180,14 +180,12 @@ private fun addAllShowInformation(db: Database, list: List<ShowInfo>) {
                     //continue
                     Show.find { Shows.url eq i.url }.toList()[0].id
                 }
-                prettyLog(s)
                 val episodeApi = EpisodeApi(i, 30000)
                 val e = if (Episode.find { Episodes.show eq s }.empty()) {
                     Episode.newEpisodes(s, episodeApi)
                 } else {
                     Episode.find { Episodes.show eq s }.toList()[0].id
                 }
-                prettyLog(e)
                 val epl = episodeApi.episodeList
                 for (li in epl) {
                     if (EpisodeList.find { EpisodeLists.url eq li.url }.empty()) {
