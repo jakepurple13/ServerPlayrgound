@@ -70,7 +70,7 @@ fun Application.module() {
         //updateShows(db)
         //val cssGridLayout = "https://grid.layoutit.com/"
         //createEverything(db, ShowApi.getAllMovies())
-        //createEverything(db)
+        createEverything(db)
         //createEverything(db, ShowApi.getAllRecent())
         //prettyLog(ShowApi(Source.LIVE_ACTION_MOVIES).showInfoList)
     }
@@ -389,15 +389,6 @@ open class SimpleJWT(val secret: String) {
     fun sign(name: String): String = JWT.create().withClaim("name", name).sign(algorithm)
 }
 
-class ChatClient(val session: DefaultWebSocketSession) {
-    companion object {
-        var lastId = AtomicInteger(0)
-    }
-
-    val id = lastId.getAndIncrement()
-    val name = "user$id"
-}
-
 class User(val name: String, val password: String)
 
 val users = Collections.synchronizedMap(
@@ -409,6 +400,15 @@ val users = Collections.synchronizedMap(
 class InvalidCredentialsException(message: String) : RuntimeException(message)
 
 class LoginRegister(val user: String, val password: String)
+
+class ChatClient(val session: DefaultWebSocketSession) {
+    companion object {
+        var lastId = AtomicInteger(0)
+    }
+
+    val id = lastId.getAndIncrement()
+    val name = "user$id"
+}
 
 private val server = ChatServer()
 
