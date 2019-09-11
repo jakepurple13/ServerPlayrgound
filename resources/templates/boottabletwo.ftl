@@ -46,6 +46,7 @@
         class="table-dark"
         data-toggle="table"
         id="table"
+        data-show-export="true"
         data-toolbar="#toolbar"
         data-search="true"
         data-custom-search="customSearch"
@@ -80,16 +81,24 @@
 <script src="https://unpkg.com/bootstrap-table@1.15.4/dist/extensions/page-jump-to/bootstrap-table-page-jump-to.min.js"></script>
 <script src="https://unpkg.com/bootstrap-table@1.15.4/dist/extensions/toolbar/bootstrap-table-toolbar.min.js"></script>
 
+<script src="https://unpkg.com/tableexport.jquery.plugin/tableExport.min.js"></script>
+<script src="https://unpkg.com/tableexport.jquery.plugin/libs/jsPDF/jspdf.min.js"></script>
+<script src="https://unpkg.com/tableexport.jquery.plugin/libs/jsPDF-AutoTable/jspdf.plugin.autotable.js"></script>
+<script src="https://unpkg.com/bootstrap-table@1.15.4/dist/extensions/export/bootstrap-table-export.min.js"></script>
+
+
+
 </body>
 <script>
-
+    var table = $('#table');
     function loadNewData() {
-        var url = $('#locale').val()
+        var url = $('#locale').val();
         console.log(url);
-        $('#table').bootstrapTable('refresh', {url: url});
+        table.bootstrapTable('refresh', {url: url});
     }
 
-    $('#table').bootstrapTable({
+    table.bootstrapTable({
+        exportDataType: "all",
         onClickRow: function (row, element, field) {
             var type = "";
             console.log(element[0]);
@@ -105,8 +114,7 @@
             var location = u.split("/");
             var locate = location.filter(x => x !== "").slice(-1)[0];
             window.open("/nsi/" + type + locate, '_blank');
-        }
-    });
+        }});
 
     $('#remove').click(function () {
         var d = document.getElementsByTagName('tr');

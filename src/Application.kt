@@ -71,7 +71,7 @@ fun Application.module() {
         //createEverything(db, ShowApi.getAllRecent())
         //createEverything(db, ShowApi(Source.RECENT_CARTOON).showInfoList)
         //prettyLog(ShowApi(Source.LIVE_ACTION_MOVIES).showInfoList)
-        createEverything(db, ShowApi.getSources(Source.ANIME, Source.DUBBED, Source.CARTOON, Source.CARTOON_MOVIES))
+        //createEverything(db, ShowApi.getSources(Source.ANIME, Source.DUBBED, Source.CARTOON, Source.CARTOON_MOVIES))
     }
 
     /*GlobalScope.launch {
