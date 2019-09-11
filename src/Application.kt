@@ -42,6 +42,7 @@ import io.ktor.websocket.WebSockets
 import io.ktor.websocket.webSocket
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.html.body
 import kotlinx.html.div
@@ -69,8 +70,15 @@ fun Application.module() {
         //val cssGridLayout = "https://grid.layoutit.com/"
         //createEverything(db, ShowApi.getAllMovies())
         //createEverything(db)
-        createEverything(db, ShowApi.getAllRecent())
+        //createEverything(db, ShowApi.getAllRecent())
         //prettyLog(ShowApi(Source.LIVE_ACTION_MOVIES).showInfoList)
+    }
+
+    GlobalScope.launch {
+        while(true) {
+            delay(3600000L)
+            //updateShows(db)
+        }
     }
 
     val simpleJwt = SimpleJWT("my-super-secret-for-jwt")

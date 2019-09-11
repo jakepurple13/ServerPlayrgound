@@ -181,7 +181,7 @@ class ShowApi(private val source: Source) {
             val list = arrayListOf<ShowInfo>()
             for (i in listOfStuff) {
                 val url = i.select("a.thumbnail").attr("abs:href")
-                list.add(ShowInfo(i.select("span.mov_title").text(), url.substring(0, url.indexOf("season"))))
+                list.add(ShowInfo(i.select("span.mov_title").text(), url.substring(0, url.indexOf("season", ignoreCase = true))))
             }
             list
         } else {

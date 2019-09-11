@@ -9,7 +9,7 @@ function connect() {
     // The socket will be connected automatically asap. Not now but after returning to the event loop,
     // so we can register handlers safely before the connection is performed.
     console.log("Begin connect");
-    socket = new WebSocket("ws://" + window.location.host + "/chat/ws");
+    socket = new WebSocket("wss://" + window.location.host + "/chat/ws");
 
     // We set a handler that will be executed if the socket has any kind of unexpected error.
     // Since this is a just sample, we only report it at the console instead of making more complex things.
@@ -75,9 +75,9 @@ function write(message) {
     line.innerHTML = message;*/
     var obj = JSON.parse(message);
     var div = document.createElement("div");
-    if(obj.type=="MESSAGE") {
+    if(obj.type==="MESSAGE") {
         div.className = "container darker";
-    } else if(obj.type=="SERVER") {
+    } else if(obj.type==="SERVER") {
         div.className = "container";
     } else {
         div.className = "container";
@@ -119,7 +119,7 @@ function onSend() {
 
 function onProfileChange() {
 
-    console.log("Hello")
+    console.log("Hello");
 
     var username = document.getElementById("username_change");
         // Validates that the input exists
@@ -162,7 +162,7 @@ function start() {
     document.getElementById("saveChanges").onclick = onProfileChange;
     // If we pressed the 'enter' key being inside the 'commandInput', send the message to improve accessibility and making it nicer.
     document.getElementById("commandInput").onkeydown = function(e) {
-        if (e.keyCode == 13) {
+        if (e.keyCode === 13) {
             onSend();
         }
     };

@@ -14,7 +14,7 @@ import org.jetbrains.exposed.sql.transactions.transaction
 
 //private const val dbPath = "/Users/jrein/Downloads/kotlin-examples-master/tutorials/mpp-iOS-Android/servertesting/resources/database/takeeight.db"
 //private const val dbPath = "resources/database/datatwo.db"
-private const val dbPath = "~/resources/database/datathree.db"
+private const val dbPath = "~/resources/database/datafour.db"
 //private const val dbPath = "/Users/jrein/Downloads/kotlin-examples-master/tutorials/mpp-iOS-Android/servertesting/resources/database/moviesreal.db"
 
 object DbSettings {
