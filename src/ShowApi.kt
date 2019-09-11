@@ -66,6 +66,14 @@ class ShowApi(private val source: Source) {
             return a + c + cm + d + l
         }
 
+        fun getSources(vararg source: Source): List<ShowInfo> {
+            val list = arrayListOf<ShowInfo>()
+            source.forEach {
+                list+=ShowApi(it).showInfoList
+            }
+            return list.toList()
+        }
+
         fun getAllMovies(): List<ShowInfo> {
             val cartoon = ShowApi(Source.CARTOON_MOVIES).showInfoList.toList()
             val anime = ShowApi(Source.ANIME_MOVIES).showInfoList.toList()

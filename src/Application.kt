@@ -71,14 +71,15 @@ fun Application.module() {
         //createEverything(db, ShowApi.getAllRecent())
         //createEverything(db, ShowApi(Source.RECENT_CARTOON).showInfoList)
         //prettyLog(ShowApi(Source.LIVE_ACTION_MOVIES).showInfoList)
+        createEverything(db, ShowApi.getSources(Source.ANIME, Source.DUBBED, Source.CARTOON, Source.CARTOON_MOVIES))
     }
 
-    GlobalScope.launch {
+    /*GlobalScope.launch {
         while (true) {
             delay(3600000L)
             //updateShows(db)
         }
-    }
+    }*/
 
     val simpleJwt = SimpleJWT("my-super-secret-for-jwt")
     install(CORS) {
