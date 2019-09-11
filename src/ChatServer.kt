@@ -168,10 +168,18 @@ class ChatServer {
     suspend fun getShow(db: Database, showToSearch: String, sender: String) {
         var s: List<EpisodeApiInfo> = listOf()
         transaction(db) {
-            s = Episode.find { Episodes.name like "%$showToSearch%" }.map { EpisodeApiInfo(it.name, it.image, it.url, it.description) }
+            s = Episode.find { Episodes.name like "%${showToSearch.trim()}%" }
+                .map { EpisodeApiInfo(it.name, it.image, it.url, it.description) }
         }
         prettyLog(s)
-        broadcast(sender, "Displaying Show: ", MessageType.EPISODE, Gson().toJson(s))
+        if (s.isEmpty()) {
+            val text =
+                "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} Show not found"
+            val sendMessage = SendMessage(ChatUser("Server"), text, MessageType.SERVER)
+            members[sender]?.send(Frame.Text(sendMessage.toJson()))
+        } else {
+            broadcast(sender, "Displaying Show: ", MessageType.EPISODE, Gson().toJson(s))
+        }
     }
 
     /**
@@ -225,11 +233,13 @@ class ChatServer {
     }
 
     suspend fun sendServerMessage(msg: String) {
-        broadcast(SendMessage(
-            ChatUser("Server"),
-            "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} $msg",
-            MessageType.SERVER
-        ).toJson())
+        broadcast(
+            SendMessage(
+                ChatUser("Server"),
+                "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} $msg",
+                MessageType.SERVER
+            ).toJson()
+        )
     }
 
     /**

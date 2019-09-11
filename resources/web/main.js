@@ -9,7 +9,7 @@ function connect() {
     // The socket will be connected automatically asap. Not now but after returning to the event loop,
     // so we can register handlers safely before the connection is performed.
     console.log("Begin connect");
-    socket = new WebSocket("wss://" + window.location.host + "/chat/ws");
+    socket = new WebSocket("ws://" + window.location.host + "/chat/ws");
 
     // We set a handler that will be executed if the socket has any kind of unexpected error.
     // Since this is a just sample, we only report it at the console instead of making more complex things.
@@ -74,22 +74,78 @@ function write(message) {
     line.className = "message";
     line.innerHTML = message;*/
     var obj = JSON.parse(message);
+
     var div = document.createElement("div");
-    if(obj.type==="MESSAGE") {
-        div.className = "container darker";
-    } else if(obj.type==="SERVER") {
-        div.className = "container";
-    } else {
-        div.className = "container";
-    }
+    var imgDiv = document.createElement("div");
+    imgDiv.className = "profile_image_layer";
     var img = document.createElement("img");
     img.src = obj.user.image;
     img.style = "width:100%;";
+    img.className = "container_img";
+    imgDiv.appendChild(img);
+    var textDiv = document.createElement("div");
+    textDiv.className = "text_layer inner";
     var line = document.createElement("p");
     line.className = "message";
     line.innerHTML = obj.message;
-    div.appendChild(img);
-    div.appendChild(line);
+    textDiv.appendChild(line);
+    //div.appendChild(img);
+    //div.appendChild(line);
+    div.appendChild(imgDiv);
+    div.appendChild(textDiv);
+    div.className = "main-grid-container darker";
+    if(obj.type==="MESSAGE") {
+
+    } else if(obj.type==="SERVER") {
+
+    } else if(obj.type==="EPISODE") {
+        var episode = JSON.parse(obj.data)[0];
+        div.className = "container";
+
+        var container = document.createElement("div");
+        container.className = "grid-container";
+
+        var imageLayer = document.createElement("div");
+        imageLayer.className = "image_layer";
+        var imgTag = document.createElement("img");
+        imgTag.src = episode.image;
+        imgTag.className = "episode_image";
+        imageLayer.appendChild(imgTag);
+
+        var titleLayer = document.createElement("div");
+        titleLayer.className = "title_layer";
+        var titleTag = document.createElement("p");
+        titleTag.innerHTML = episode.name;
+        titleLayer.appendChild(titleTag);
+
+        var descriptionLayer = document.createElement("div");
+        descriptionLayer.className = "description_layer";
+        var descriptionTag = document.createElement("p");
+        descriptionTag.innerHTML = episode.description;
+        descriptionLayer.appendChild(descriptionTag);
+
+        container.appendChild(descriptionLayer);
+        container.appendChild(titleLayer);
+        container.appendChild(imageLayer);
+
+        container.addEventListener("click", function () {
+            var u = episode.url;
+            if (u.includes("gogoanime")) {
+                type = "g";
+            } else if (u.includes("putlocker")) {
+                type = "p";
+            } else if (u.includes("animetoon")) {
+                type = "a";
+            }
+            var location = u.split("/");
+            var locate = location.filter(x => x !== "").slice(-1)[0];
+            console.log("/nsi/" + type + locate);
+            window.open("/nsi/" + type + locate, '_blank');
+        });
+        div.appendChild(container);
+    } else {
+
+    }
 
     // Then we get the 'messages' container that should be available in the HTML itself already.
     var messagesDiv = document.getElementById("messages");

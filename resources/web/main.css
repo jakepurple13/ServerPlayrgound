@@ -10,19 +10,19 @@ body {
     padding: 5px;
 }
 .header {
-    height: 71px;
+    /*height: 71px;*/
     padding: 5px;
 }
 .messages {
     position: absolute;
-    top: 81px;
+    top: 85px;
     left: 5px;
     right: 5px;
     padding: 5px;
     bottom: 70px;
     overflow-y: scroll;
     border: 1px solid black;
-    background-color: lightyellow;
+    background-color: #5e79cb;/*lightyellow;*/
 }
 .form label {
     display: block;
@@ -75,7 +75,7 @@ body {
   display: table;
 }
 
-.container img {
+.container_img {
   float: left;
   max-width: 60px;
   width: 100%;
@@ -98,3 +98,48 @@ body {
   float: left;
   color: #999;
 }
+
+.inner {
+    align-self: center;
+    justify-self: start;
+}
+
+.main-grid-container {
+    border: 2px solid #dedede;
+    background-color: #f1f1f1;
+    border-radius: 5px;
+    padding: 10px;
+    margin: 10px 0;
+    display: grid;
+    grid-template-columns: 0.3fr 1fr 1fr;
+    grid-template-rows: 0.5fr;
+    grid-template-areas: "profile_image_layer text_layer text_layer";
+}
+
+.profile_image_layer { grid-area: profile_image_layer; }
+
+.text_layer { grid-area: text_layer; }
+
+.profile_image {
+    float: left;
+    max-width: 60px;
+    width: 100%;
+    margin-right: 20px;
+    border-radius: 50%;
+}
+
+/*This is for Show information*/
+
+.grid-container {
+    display: grid;
+    grid-column-gap: 5px;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 0.5fr 1fr;
+    grid-template-areas: "image_layer title_layer title_layer" "image_layer description_layer description_layer";
+}
+
+.image_layer { grid-area: image_layer; }
+
+.title_layer { grid-area: title_layer; }
+
+.description_layer { grid-area: description_layer; }

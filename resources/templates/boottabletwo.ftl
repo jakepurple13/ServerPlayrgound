@@ -38,6 +38,9 @@
             <option value='/api/web/all.json'>All</option>
         </select>
     </div>
+    <div class="input-group-prepend">
+        <button id="go_to_chat" class="btn btn-primary"><i class="glyphicon glyphicon-remove"></i>Chat</button>
+    </div>
 </div>
 <table
         class="table-dark"
@@ -108,6 +111,10 @@
     $('#remove').click(function () {
         var d = document.getElementsByTagName('tr');
         d[Math.floor(Math.random() * d.length - 1)].cells[0].dispatchEvent(new Event('click'));
+    });
+
+    $('#go_to_chat').click(function () {
+        window.open("/chat", '_blank');
     });
 
     function customSearch(data, text) {

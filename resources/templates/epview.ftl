@@ -122,8 +122,8 @@
                 url: "/api/video/" + url.replaceAll("/", "_") + ".json",
                 dataType: 'json',
                 success: function (responsedata) {
-                    $("#showlink" + num).attr("href", responsedata.VideoLink)
-                    $("#showlink" + num).text("Link get!")
+                    $("#showlink" + num).attr("href", responsedata.VideoLink);
+                    $("#showlink" + num).text("Link get!");
                 }
             })
         }
@@ -133,16 +133,6 @@
         return this.replace(new RegExp(str1.replace(/([\/\,\!\\\^\$\{\}\[\]\(\)\.\*\+\?\|\<\>\-\&])/g, "\\$&"), (ignore ? "gi" : "g")), (typeof (str2) == "string") ? str2.replace(/\$/g, "$$$$") : str2);
     };
 
-    /*function loadImage(imageUrl) {
-        var image = document.getElementById("cover_image");
-        var downloadingImage = new Image();
-        downloadingImage.onload = function(){
-            image.src = this.src;
-        };
-        downloadingImage.src = imageUrl;
-    }
-    loadImage("${data.image}");
-    */
 </script>
 
 </html>
