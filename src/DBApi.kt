@@ -170,15 +170,14 @@ private fun addAllShowInformation(db: Database, list: List<ShowInfo>) {
     transaction(db) {
         for ((j, i) in list.withIndex()) {
             try {
-
                 val s = if (Show.find { Shows.url eq i.url }.empty()) {
                     Shows.insertAndGetId {
                         it[name] = i.name
                         it[url] = i.url
                     }
                 } else {
-                    //continue
-                    Show.find { Shows.url eq i.url }.toList()[0].id
+                    continue
+                    //Show.find { Shows.url eq i.url }.toList()[0].id
                 }
                 val episodeApi = EpisodeApi(i, 30000)
                 val e = if (Episode.find { Episodes.show eq s }.empty()) {
@@ -197,10 +196,11 @@ private fun addAllShowInformation(db: Database, list: List<ShowInfo>) {
                     }
                 }
             } catch (e: Exception) {
-
-            } finally {
                 commit()
                 continue
+            } finally {
+                /*commit()
+                continue*/
             }
         }
     }
