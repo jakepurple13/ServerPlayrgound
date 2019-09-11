@@ -44,6 +44,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.css.html
 import kotlinx.html.body
 import kotlinx.html.div
 import kotlinx.html.onClick
@@ -75,7 +76,7 @@ fun Application.module() {
     }
 
     GlobalScope.launch {
-        while(true) {
+        while (true) {
             delay(3600000L)
             //updateShows(db)
         }
@@ -210,7 +211,7 @@ fun Application.module() {
                     val episodeList: List<EpisodeList> = emptyList()
                 )
 
-                var episode = EpisodeApiInfo()
+                var episode: EpisodeApiInfo? = null
 
                 val source = when (name[0]) {
                     'p' -> "putlocker"
@@ -223,24 +224,31 @@ fun Application.module() {
                         val e = Episode.find {
                             Episodes.url like "%$source%" and (Episodes.url like "%${name.substring(1)}%")
                         }.toList()
-                        val list = EpisodeList.find { EpisodeLists.episode eq e[0].id }.toList()
-                        episode = EpisodeApiInfo(
-                            e[0].name,
-                            e[0].image,
-                            e[0].url,
-                            e[0].description,
-                            list
-                        )
+
+                        if (e.isNotEmpty()) {
+                            val list = EpisodeList.find { EpisodeLists.episode eq e[0].id }.toList()
+                            episode = EpisodeApiInfo(
+                                e[0].name,
+                                e[0].image,
+                                e[0].url,
+                                e[0].description,
+                                list
+                            )
+                        }
                     } catch (ignored: Exception) {
 
                     }
                 }
-                call.respond(
-                    FreeMarkerContent(
-                        "epview.ftl",
-                        mapOf("data" to episode)
-                    )
-                )
+                if (episode != null)
+                    call.respond(FreeMarkerContent("epview.ftl", mapOf("data" to episode)))
+                else
+                    call.respondHtml {
+                        body {
+                            p {
+                                +"404! Show not found"
+                            }
+                        }
+                    }
             }
         }
 
@@ -324,8 +332,9 @@ fun Application.module() {
             get {
                 val starting = "Running at ${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())}"
                 prettyLog(starting)
-                val time = measureTimeMillis { updateShows(db).join() }
-                val finished = "Finished after $time at ${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())}"
+                val time = measureTimeMillis { /*updateShows(db).join()*/ }
+                val finished =
+                    "Finished after $time at ${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())}"
                 prettyLog(starting + "\n" + finished)
                 call.respondHtml {
                     body {
