@@ -13,11 +13,13 @@ import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.transactions.transaction
 
 //private const val dbPath = "/Users/jrein/Downloads/kotlin-examples-master/tutorials/mpp-iOS-Android/servertesting/resources/database/takeeight.db"
-private const val dbPath = "resources/database/datatwo.db"
+//private const val dbPath = "resources/database/datatwo.db"
+private const val dbPath = "~/resources/database/datathree.db"
 //private const val dbPath = "/Users/jrein/Downloads/kotlin-examples-master/tutorials/mpp-iOS-Android/servertesting/resources/database/moviesreal.db"
 
 object DbSettings {
     val db by lazy {
+        prettyLog(System.getenv("JDBC_DATABASE_URL"))
         //Database.connect("jdbc:h2:mem:regular;DB_CLOSE_DELAY=-1;", "org.h2.Driver")
         //Database.connect("jdbc:sqlite:/Users/jrein/Downloads/kotlin-examples-master/tutorials/mpp-iOS-Android/servertesting/resources/database/data.db", "org.sqlite.JDBC")
         /*Database.connect(
@@ -25,13 +27,9 @@ object DbSettings {
             "org.h2.Driver"
         )*/
 
-        /*Database.connect(
-            "jdbc:h2:$dbPath",
-            "org.h2.Driver"
-        )*/
-        prettyLog(System.getenv("JDBC_DATABASE_URL"))
+        Database.connect("jdbc:h2:$dbPath", "org.h2.Driver")
         //Database.connect(System.getenv("JDBC_DATABASE_URL"), driver = "org.postgresql.Driver")
-        Database.connect("jdbc:sqlite:$dbPath", "org.sqlite.JDBC")
+        //Database.connect("jdbc:sqlite:$dbPath", "org.sqlite.JDBC")
     }
 }
 
@@ -52,11 +50,11 @@ class Show(id: EntityID<Int>) : IntEntity(id) {
 }
 
 object Episodes : IntIdTable() {
-    val url = varchar("url", 10000)
-    val name = varchar("name", 10000)
-    val image = varchar("image_url", 10000)
-    val description = varchar("description", 10000)
-    val show = reference("show", Shows)
+    val url = varchar("episode_url", 10000).primaryKey()
+    val name = varchar("episode_name", 10000)
+    val image = varchar("episode_image_url", 10000)
+    val description = varchar("episode_description", 10000)
+    val show = reference("episode_show", Shows)
 }
 
 class Episode(id: EntityID<Int>) : IntEntity(id) {
@@ -90,9 +88,9 @@ class Episode(id: EntityID<Int>) : IntEntity(id) {
 }
 
 object EpisodeLists : IntIdTable() {
-    val name = varchar("name", 10000)
-    val url = varchar("url", 10000).primaryKey()
-    val episode = reference("episode", Episodes)
+    val name = varchar("episodelist_name", 10000)
+    val url = varchar("episodelist_url", 10000).primaryKey()
+    val episode = reference("episodelist_episode", Episodes)
 }
 
 class EpisodeList(id: EntityID<Int>) : IntEntity(id) {
