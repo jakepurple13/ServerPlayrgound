@@ -45,10 +45,7 @@ import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.css.html
-import kotlinx.html.body
-import kotlinx.html.div
-import kotlinx.html.onClick
-import kotlinx.html.p
+import kotlinx.html.*
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.text.SimpleDateFormat
@@ -70,7 +67,7 @@ fun Application.module() {
         //updateShows(db)
         //val cssGridLayout = "https://grid.layoutit.com/"
         //createEverything(db, ShowApi.getAllMovies())
-        createEverything(db)
+        //createEverything(db)
         //createEverything(db, ShowApi.getAllRecent())
         //prettyLog(ShowApi(Source.LIVE_ACTION_MOVIES).showInfoList)
     }
@@ -203,14 +200,6 @@ fun Application.module() {
                 prettyLog(call.request.origin.remoteHost)
                 val name = call.parameters["name"]!!
 
-                data class EpisodeApiInfo(
-                    val name: String = "",
-                    val image: String = "",
-                    val url: String = "",
-                    val description: String = "",
-                    val episodeList: List<EpisodeList> = emptyList()
-                )
-
                 var episode: EpisodeApiInfo? = null
 
                 val source = when (name[0]) {
@@ -255,76 +244,151 @@ fun Application.module() {
         route("/api") {
             get("/about") {
                 //TODO: Make api about
-
+                call.respondHtml {
+                    body {
+                        dl {
+                            dt {
+                                +"To get video url"
+                            }
+                            dd {
+                                +"/api/video/{url}.json"
+                            }
+                            dd {
+                                +"make sure all of the \"/\" are changed to \"_\" when submitting"
+                            }
+                            br {  }
+                            dt {
+                                +"To get all shows in database"
+                            }
+                            dd {
+                                +"/api/user/all.json"
+                            }
+                            br {  }
+                            dt {
+                                +"To get recent shows"
+                            }
+                            dd {
+                                +"/api/user/r{type}.json"
+                            }
+                            dd {
+                                +"l for TV Shows"
+                            }
+                            dd {
+                                +"c for Cartoons"
+                            }
+                            dd {
+                                +"a for Anime"
+                            }
+                            dd {
+                                +"all for All"
+                            }
+                            br {  }
+                            dt {
+                                +"To get Show Information"
+                            }
+                            dd {
+                                +"/nsi/{name}.json"
+                            }
+                            dd {
+                                +"name consists of the first letter of the kind of source and the name in all lowercase and hyphens instead of spaces"
+                            }
+                        }
+                    }
+                }
             }
             get("/video/{url}.json") {
                 val url = call.parameters["url"]!!
                 val vla = VideoLinkApi(url.replace("_", "/")).getVideoLink()
                 call.respond(mapOf("VideoLink" to vla))
             }
-            get("/all.json") {
-                var list = listOf<ShowInfo>()
-                transaction(db) {
-                    list = Show.all().sortedBy { it.name }.map { ShowInfo(it.name, it.url) }
+            route("/web") {
+                get("/all.json") {
+                    var list = listOf<ShowInfo>()
+                    transaction(db) {
+                        list = Show.all().sortedBy { it.name }.map { ShowInfo(it.name, it.url) }
+                    }
+                    call.respond(list)
                 }
-                call.respond(list)
+                get("/r{type}.json") {
+                    when (call.parameters["type"]!!) {
+                        "c" -> Source.RECENT_CARTOON
+                        "a" -> Source.RECENT_ANIME
+                        "l" -> Source.RECENT_LIVE_ACTION
+                        else -> null
+                    }?.let {
+                        val s = ShowApi(it).showInfoList
+                        call.respond(s)
+                    }
+                }
+                get("/t{type}.json") {
+                    val type = call.parameters["type"]!!
+                    var list = listOf<ShowInfo>()
+                    transaction(db) {
+                        list = Show.find { Shows.url like "%$type%" }.sortedBy { it.name }
+                            .map { ShowInfo(it.name, it.url) }
+                    }
+                    call.respond(list)
+                }
             }
-            get("/userAll.json") {
-                var list = listOf<ShowInfo>()
-                transaction(db) {
-                    list = Show.all().sortedBy { it.name }.map { ShowInfo(it.name, it.url) }
+            route("/user") {
+                get("/all.json") {
+                    var list = listOf<ShowInfo>()
+                    transaction(db) {
+                        list = Show.all().sortedBy { it.name }.map { ShowInfo(it.name, it.url) }
+                    }
+                    call.respond(mapOf("Shows" to list))
                 }
-                call.respond(mapOf("Shows" to list))
-            }
-            get("/nsi/{name}.json") {
-                val name = call.parameters["name"]!!
+                get("/nsi/{name}.json") {
+                    val name = call.parameters["name"]!!
 
-                data class EpListInfo(val name: String, val url: String)
-                data class EpisodeApiInfo(
-                    val name: String = "",
-                    val image: String = "",
-                    val url: String = "",
-                    val description: String = "",
-                    val episodeList: List<EpListInfo> = emptyList()
-                )
-
-                val source = when (name[0]) {
-                    'p' -> "putlocker"
-                    'g' -> "gogoanime"
-                    'a' -> "animetoon"
-                    else -> ""
-                }
-
-                var episode = EpisodeApiInfo()
-
-                transaction(db) {
-                    val e = Episode.find {
-                        Episodes.url like "%$source%" and (Episodes.url like "%${name.substring(
-                            1
-                        )}%")
-                    }.toList()
-                    val i = e[0]
-                    val l = EpisodeList.find { EpisodeLists.episode eq i.id }.toList()
-                    val list = l.map { EpListInfo(it.name, it.url) }
-                    episode = EpisodeApiInfo(
-                        i.name,
-                        i.image,
-                        i.url,
-                        i.description,
-                        list
+                    data class EpListInfo(val name: String, val url: String)
+                    data class EpisodeApiInfo(
+                        val name: String = "",
+                        val image: String = "",
+                        val url: String = "",
+                        val description: String = "",
+                        val episodeList: List<EpListInfo> = emptyList()
                     )
+
+                    val source = when (name[0]) {
+                        'p' -> "putlocker"
+                        'g' -> "gogoanime"
+                        'a' -> "animetoon"
+                        else -> ""
+                    }
+
+                    var episode = EpisodeApiInfo()
+
+                    transaction(db) {
+                        val e = Episode.find {
+                            Episodes.url like "%$source%" and (Episodes.url like "%${name.substring(
+                                1
+                            )}%")
+                        }.toList()
+                        val i = e[0]
+                        val l = EpisodeList.find { EpisodeLists.episode eq i.id }.toList()
+                        val list = l.map { EpListInfo(it.name, it.url) }
+                        episode = EpisodeApiInfo(
+                            i.name,
+                            i.image,
+                            i.url,
+                            i.description,
+                            list
+                        )
+                    }
+                    call.respond(mapOf("EpisodeInfo" to episode))
                 }
-                call.respond(mapOf("EpisodeInfo" to episode))
-            }
-            get("/r{type}.json") {
-                when (call.parameters["type"]!!) {
-                    "c" -> Source.RECENT_CARTOON
-                    "a" -> Source.RECENT_ANIME
-                    "l" -> Source.RECENT_LIVE_ACTION
-                    else -> null
-                }?.let {
-                    val s = ShowApi(it).showInfoList
-                    call.respond(mapOf("shows" to synchronized(s) { s.toList() }))
+                get("/r{type}.json") {
+                    when (call.parameters["type"]!!) {
+                        "c" -> Source.RECENT_CARTOON
+                        "a" -> Source.RECENT_ANIME
+                        "l" -> Source.RECENT_LIVE_ACTION
+                        "all" -> Source.DUBBED
+                        else -> null
+                    }?.let {
+                        val s = if (it == Source.DUBBED) ShowApi.getAllRecent() else ShowApi(it).showInfoList
+                        call.respond(mapOf("Shows" to synchronized(s) { s.toList() }))
+                    }
                 }
             }
         }
@@ -400,6 +464,14 @@ val users = Collections.synchronizedMap(
 class InvalidCredentialsException(message: String) : RuntimeException(message)
 
 class LoginRegister(val user: String, val password: String)
+
+data class EpisodeApiInfo(
+    val name: String = "",
+    val image: String = "",
+    val url: String = "",
+    val description: String = "",
+    val episodeList: List<EpisodeList> = emptyList()
+)
 
 class ChatClient(val session: DefaultWebSocketSession) {
     companion object {
