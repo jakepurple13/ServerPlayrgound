@@ -6,15 +6,13 @@ import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.IntIdTable
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.SchemaUtils
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.insertAndGetId
+import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.transactions.transaction
 
 //private const val dbPath = "/Users/jrein/Downloads/kotlin-examples-master/tutorials/mpp-iOS-Android/servertesting/resources/database/takeeight.db"
-//private const val dbPath = "resources/database/datatwo.db"
-private const val dbPath = "~/resources/database/datafour.db"
+private const val dbPath = "resources/database/data15.db"
+//private const val dbPath = "~/resources/database/datafive.db"
 //private const val dbPath = "/Users/jrein/Downloads/kotlin-examples-master/tutorials/mpp-iOS-Android/servertesting/resources/database/moviesreal.db"
 
 object DbSettings {
@@ -27,16 +25,16 @@ object DbSettings {
             "org.h2.Driver"
         )*/
 
-        Database.connect("jdbc:h2:$dbPath", "org.h2.Driver")
+        //Database.connect("jdbc:h2:$dbPath", "org.h2.Driver")
         //Database.connect(System.getenv("JDBC_DATABASE_URL"), driver = "org.postgresql.Driver")
-        //Database.connect("jdbc:sqlite:$dbPath", "org.sqlite.JDBC")
+        Database.connect("jdbc:sqlite:$dbPath", "org.sqlite.JDBC")
         //Database.connect(System.getenv("JDBC_DATABASE_URL"), driver = "com.mysql.jdbc.Driver")
     }
 }
 
 object Shows : IntIdTable() {
     val name = varchar("show_name", 10000)
-    val url = varchar("show_url", 10000).primaryKey()
+    val url = varchar("show_url", 10000).uniqueIndex()
 }
 
 class Show(id: EntityID<Int>) : IntEntity(id) {
@@ -51,7 +49,7 @@ class Show(id: EntityID<Int>) : IntEntity(id) {
 }
 
 object Episodes : IntIdTable() {
-    val url = varchar("episode_url", 10000).primaryKey()
+    val url = varchar("episode_url", 10000).uniqueIndex()
     val name = varchar("episode_name", 10000)
     val image = varchar("episode_image_url", 10000)
     val description = varchar("episode_description", 10000)
@@ -90,7 +88,7 @@ class Episode(id: EntityID<Int>) : IntEntity(id) {
 
 object EpisodeLists : IntIdTable() {
     val name = varchar("episodelist_name", 10000)
-    val url = varchar("episodelist_url", 10000).primaryKey()
+    val url = varchar("episodelist_url", 10000).uniqueIndex()
     val episode = reference("episodelist_episode", Episodes)
 }
 
@@ -171,23 +169,25 @@ fun createEverything(db: Database) = GlobalScope.launch {
 private fun addAllShowInformation(db: Database, list: List<ShowInfo>) {
     transaction(db) {
         for ((j, i) in list.withIndex()) {
-
-            val s = if (Show.find { Shows.url eq i.url }.empty()) {
-                Shows.insertAndGetId {
-                    it[name] = i.name
-                    it[url] = i.url
-                }
-            } else {
-                continue
-                Show.find { Shows.url eq i.url }.toList()[0].id
-            }
             try {
+
+                val s = if (Show.find { Shows.url eq i.url }.empty()) {
+                    Shows.insertAndGetId {
+                        it[name] = i.name
+                        it[url] = i.url
+                    }
+                } else {
+                    //continue
+                    Show.find { Shows.url eq i.url }.toList()[0].id
+                }
+                prettyLog(s)
                 val episodeApi = EpisodeApi(i, 30000)
                 val e = if (Episode.find { Episodes.show eq s }.empty()) {
                     Episode.newEpisodes(s, episodeApi)
                 } else {
                     Episode.find { Episodes.show eq s }.toList()[0].id
                 }
+                prettyLog(e)
                 val epl = episodeApi.episodeList
                 for (li in epl) {
                     if (EpisodeList.find { EpisodeLists.url eq li.url }.empty()) {
@@ -199,6 +199,9 @@ private fun addAllShowInformation(db: Database, list: List<ShowInfo>) {
                     }
                 }
             } catch (e: Exception) {
+
+            } finally {
+                commit()
                 continue
             }
         }
