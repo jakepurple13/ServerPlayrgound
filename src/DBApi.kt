@@ -27,9 +27,10 @@ object DbSettings {
             "org.h2.Driver"
         )*/
 
-        Database.connect("jdbc:h2:$dbPath", "org.h2.Driver")
-        //Database.connect(System.getenv("JDBC_DATABASE_URL"), driver = "org.postgresql.Driver")
+        //Database.connect("jdbc:h2:$dbPath", "org.h2.Driver")
+        Database.connect(System.getenv("JDBC_DATABASE_URL"), driver = "org.postgresql.Driver")
         //Database.connect("jdbc:sqlite:$dbPath", "org.sqlite.JDBC")
+        //Database.connect(System.getenv("JDBC_DATABASE_URL"), driver = "com.mysql.jdbc.Driver")
     }
 }
 
@@ -177,6 +178,7 @@ private fun addAllShowInformation(db: Database, list: List<ShowInfo>) {
                     it[url] = i.url
                 }
             } else {
+                continue
                 Show.find { Shows.url eq i.url }.toList()[0].id
             }
             try {
