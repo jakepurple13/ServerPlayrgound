@@ -19,7 +19,7 @@ class ChatUser(var name: String, var image: String = "https://www.w3schools.com/
  */
 class ChatServer {
     /**
-     * Atomic counter used to get unique user-names based on the maxiumum users the server had.
+     * Atomic counter used to get unique user-names based on the maximum users the server had.
      */
     val usersCounter = AtomicInteger()
 
@@ -36,10 +36,10 @@ class ChatServer {
     val members = ConcurrentHashMap<String, MutableList<WebSocketSession>>()
 
     /**
-     * A list of the lastest messages sent to the server, so new members can have a bit context of what
+     * A list of the latest messages sent to the server, so new members can have a bit context of what
      * other people was talking about before joining.
      */
-    val lastMessages = LinkedList<String>()
+    val lastMessages = LinkedList<SendMessage>()
 
     /**
      * Handles that a member identified with a session id and a socket joined.
@@ -59,27 +59,32 @@ class ChatServer {
         // Only when joining the first socket for a member notifies the rest of the users.
         if (list.size == 1) {
             //broadcast("server", "Member joined: $name.")
-            val text = "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} Connected"
-            val sendMessage = SendMessage(ChatUser("Server"), text, MessageType.SERVER)
+            broadcastUserUpdate()
+            //val text = "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} Connected"
+            val sendMessage = SendMessage(ChatUser("Server"), "Connected", MessageType.SERVER)
             members[member]?.send(Frame.Text(sendMessage.toJson()))
+
         }
 
         // Sends the user the latest messages from this server to let the member have a bit context.
         val messages = synchronized(lastMessages) { lastMessages.toList() }
         for (message in messages) {
-            socket.send(Frame.Text(message))
+            //val sendMessage = SendMessage(ChatUser("Server"), message, MessageType.SERVER).toJson()
+            //socket.send(Frame.Text(sendMessage))
+            socket.send(Frame.Text(message.toJson()))
         }
     }
 
     /**
      * Handles a [member] idenitified by its session id renaming [to] a specific name.
      */
-    fun memberRenamed(member: String, to: String) {
+    suspend fun memberRenamed(member: String, to: String) {
         // Re-sets the member name.
         //val oldName = memberNames.put(member, to) ?: member
         memberNames[member]?.name = to
         // Notifies everyone in the server about this change.
         //broadcast("server", "Member renamed from $member to $to")
+        broadcastUserUpdate()
     }
 
     /**
@@ -106,6 +111,7 @@ class ChatServer {
         if (connections != null && connections.isEmpty()) {
             val name = memberNames.remove(member)?.name ?: member
             broadcast("server", "Member left: $name.", MessageType.SERVER)
+            broadcastUserUpdate()
         }
     }
 
@@ -113,10 +119,11 @@ class ChatServer {
      * Handles the 'who' command by sending the member a list of all all members names in the server.
      */
     suspend fun who(sender: String) {
-        val text =
+        /*val text =
             "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} ${memberNames.values.joinToString(
                 prefix = "[server::who] "
-            ) { it.name }}"
+            ) { it.name }}"*/
+        val text = memberNames.values.joinToString(prefix = "[server::who] ") { it.name }
         val sendMessage = SendMessage(ChatUser("Server"), text, MessageType.SERVER)
         members[sender]?.send(Frame.Text(sendMessage.toJson()))
         //members[sender]?.send(Frame.Text(memberNames.values.joinToString(prefix = "[server::who] ")))
@@ -132,9 +139,8 @@ class ChatServer {
      * Handles the 'help' command by sending the member a list of available commands.
      */
     suspend fun help(sender: String) {
-        val text =
-            "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} [server::help] Possible commands are: /user, /help, /me and /who"
-        val sendMessage = SendMessage(ChatUser("Server"), text, MessageType.SERVER)
+        //val text = "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} [server::help] Possible commands are: /user, /help, /me and /who"
+        val sendMessage = SendMessage(ChatUser("Server"), "[server::help] Possible commands are: /user, /help, /me and /who", MessageType.SERVER)
         members[sender]?.send(Frame.Text(sendMessage.toJson()))
         //members[sender]?.send(Frame.Text("[server::help] Possible commands are: /user, /help, /me and /who"))
         /*broadcast(
@@ -145,17 +151,35 @@ class ChatServer {
         )*/
     }
 
+    private fun getMemberByUsername(userName: String) = memberNames.search(1L) { id, user ->
+        if(user.name == userName)
+            id
+        else
+            null
+    }
+
     /**
      * Handles sending to a [recipient] from a [sender] a [message].
      *
      * Both [recipient] and [sender] are identified by its session-id.
      */
     suspend fun sendTo(recipient: String, sender: String, message: String) {
-        val text = "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} $message"
-        val sendMessage = SendMessage(memberNames[sender] ?: ChatUser(sender), text, MessageType.MESSAGE)
-        members[recipient]?.send(Frame.Text(sendMessage.toJson()))
-        //members[recipient]?.send(Frame.Text("[$sender] $message"))
-        //broadcast(sender, message, MessageType.MESSAGE, recipient)
+        //val text = "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} $message"
+        prettyLog(members.keys.joinToString(", "))
+        prettyLog(memberNames.keys.joinToString(", "))
+        val sendToUser = getMemberByUsername(recipient)
+        if(sendToUser==null) {
+            val sendMessage = SendMessage(ChatUser("Server"), "User not found", MessageType.SERVER)
+            members[sender]?.send(Frame.Text(sendMessage.toJson()))
+        } else {
+            val user = memberNames[sender]!!
+            val sendMessage = SendMessage(user, "[${user.name}] $message", MessageType.MESSAGE, data = "pm")
+            members[sendToUser]?.send(Frame.Text(sendMessage.toJson()))
+            members[sender]?.send(Frame.Text(sendMessage.toJson()))
+            //members[recipient]?.send(Frame.Text("[$sender] $message"))
+            //broadcast(sender, message, MessageType.MESSAGE, recipient)
+        }
+        prettyLog("$recipient\n$sendToUser\n$message")
     }
 
     data class EpisodeApiInfo(
@@ -173,9 +197,8 @@ class ChatServer {
         }
         prettyLog(s)
         if (s.isEmpty()) {
-            val text =
-                "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} Show not found"
-            val sendMessage = SendMessage(ChatUser("Server"), text, MessageType.SERVER)
+            //val text = "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} Show not found"
+            val sendMessage = SendMessage(ChatUser("Server"), "Show not found", MessageType.SERVER)
             members[sender]?.send(Frame.Text(sendMessage.toJson()))
         } else {
             broadcast(sender, "Displaying Show: ", MessageType.EPISODE, Gson().toJson(s))
@@ -195,12 +218,12 @@ class ChatServer {
 
         // Appends the message to the list of [lastMessages] and caps that collection to 100 items to prevent
         // growing too much.
-        synchronized(lastMessages) {
+        /*synchronized(lastMessages) {
             lastMessages.add(formatted)
             if (lastMessages.size > 100) {
                 lastMessages.removeFirst()
             }
-        }
+        }*/
     }
 
     /**
@@ -216,19 +239,19 @@ class ChatServer {
 
         // Appends the message to the list of [lastMessages] and caps that collection to 100 items to prevent
         // growing too much.
-        synchronized(lastMessages) {
-            lastMessages.add(formatted)
-            if (lastMessages.size > 100) {
-                lastMessages.removeFirst()
-            }
-        }
     }
 
     enum class MessageType {
-        MESSAGE, EPISODE, SERVER
+        MESSAGE, EPISODE, SERVER, INFO
     }
 
-    data class SendMessage(val user: ChatUser, val message: String, val type: MessageType?, val data: String? = null) {
+    /*data class SendMessage(val user: ChatUser, val message: String, val type: MessageType?, val data: String? = null) {
+        fun toJson(): String = Gson().toJson(this)
+    }*/
+
+    data class SendMessage(val user: ChatUser, val message: String, val type: MessageType?, val data: Any? = null) {
+        private val time = SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())
+
         fun toJson(): String = Gson().toJson(this)
     }
 
@@ -236,7 +259,7 @@ class ChatServer {
         broadcast(
             SendMessage(
                 ChatUser("Server"),
-                "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} $msg",
+                msg,
                 MessageType.SERVER
             ).toJson()
         )
@@ -248,6 +271,26 @@ class ChatServer {
     private suspend fun broadcast(message: String) {
         members.values.forEach { socket ->
             socket.send(Frame.Text(message))
+        }
+    }
+
+    private suspend fun broadcastUserUpdate() {
+        /*members.values.forEach { sockets ->
+            sockets.send(Frame.Text(SendMessage(
+                ChatUser("Server"),
+                "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} ",
+                MessageType.INFO,
+                memberNames.values.joinToString("\n") { it.name }
+            ).toJson()))
+        }*/
+
+        members.values.forEach { sockets ->
+            sockets.send(Frame.Text(SendMessage(
+                ChatUser("Server"),
+                "",
+                MessageType.INFO,
+                memberNames.values
+            ).toJson()))
         }
     }
 
@@ -265,12 +308,19 @@ class ChatServer {
         sender: String,
         message: String,
         type: MessageType = MessageType.MESSAGE,
-        data: String? = null
+        data: Any? = null
     ) {
         //val name = memberNames[sender]?.name ?: sender
-        val text = "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} $message"
-        val sendMessage = SendMessage(memberNames[sender] ?: ChatUser("Server"), text, type, data)
+        //val text = "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} $message"
+        val sendMessage = SendMessage(memberNames[sender] ?: ChatUser("Server"), message, type, data)
         broadcast(sendMessage.toJson())
+        prettyLog(sendMessage.toJson())
+        synchronized(lastMessages) {
+            lastMessages.add(sendMessage)
+            if (lastMessages.size > 100) {
+                lastMessages.removeFirst()
+            }
+        }
     }
 
     /**

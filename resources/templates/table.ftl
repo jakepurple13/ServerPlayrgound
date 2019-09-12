@@ -53,7 +53,7 @@
 
 <h2>Shows</h2>
 
-<input type="text" id="myInput" onkeyup="myFunction()" placeholder="Search for names.." title="Type in a name">
+<input type="text" id="myInput" onkeyup="myFunction()" placeholder="Search for names..." title="Type in a name">
 
 <table id="table_format" cellspacing="0" width="100%">
     <tr class="header">

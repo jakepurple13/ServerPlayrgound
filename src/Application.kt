@@ -67,12 +67,12 @@ fun Application.module() {
         //updateShows(db)
         //val cssGridLayout = "https://grid.layoutit.com/"
         //createEverything(db, ShowApi.getAllMovies())
-        transaction(db) {
+        /*transaction(db) {
             if(Show.all().count()==0) {
                 //createEverything(db)
-                createEverything(db, ShowApi.getSources(Source.ANIME, Source.DUBBED, Source.CARTOON, Source.CARTOON_MOVIES).sortedBy { it.name })
+                createEverything(db, ShowApi.getSources(Source.ANIME, Source.DUBBED, Source.CARTOON, Source.CARTOON_MOVIES))
             }
-        }
+        }*/
         //createEverything(db, ShowApi.getAllRecent())
         //createEverything(db, ShowApi(Source.RECENT_CARTOON).showInfoList)
         //prettyLog(ShowApi(Source.LIVE_ACTION_MOVIES).showInfoList)
@@ -398,6 +398,17 @@ fun Application.module() {
                         call.respond(mapOf("Shows" to synchronized(s) { s.toList() }))
                     }
                 }
+
+                get("/t{type}.json") {
+                    val type = call.parameters["type"]!!
+                    var list = listOf<ShowInfo>()
+                    transaction(db) {
+                        list = Shows.select { Shows.url like "%$type%" }.map { ShowInfo(it[Shows.name], it[Shows.url]) }
+                            .sortedBy { it.name }
+                        //list = Show.find { Shows.url like "%$type%" }.sortedBy { it.name }.map { ShowInfo(it.name, it.url) }
+                    }
+                    call.respond(list)
+                }
             }
         }
         route("/updateShows") {
@@ -433,6 +444,12 @@ fun Application.module() {
                         mapOf("data" to list)
                     )
                 )
+                /*call.respond(
+                    FreeMarkerContent(
+                        "table.ftl",
+                        mapOf("data" to list)
+                    )
+                )*/
             }
         }
         static("/static") {
@@ -507,7 +524,7 @@ private suspend fun receivedMessage(id: String, command: String) {
         // The command `who` responds the user about all the member names connected to the user.
         command.startsWith("/who") -> server.who(id)
         // The command `user` allows the user to set its name.
-        command.startsWith("/user") -> {
+        command.startsWith("/user ") -> {
             // We strip the command part to get the rest of the parameters.
             // In this case the only parameter is the user's newName.
             val newName = command.removePrefix("/user").trim()
@@ -522,14 +539,14 @@ private suspend fun receivedMessage(id: String, command: String) {
                 else -> server.memberRenamed(id, newName)
             }
         }
-        command.startsWith("/show") -> {
+        command.startsWith("/show ") -> {
             val showName = command.removePrefix("/show")
             server.getShow(DbSettings.db, showName, id)
         }
-        command.startsWith("/image") -> {
+        command.startsWith("/image ") -> {
             // We strip the command part to get the rest of the parameters.
             // In this case the only parameter is the user's newName.
-            val newName = command.removePrefix("/image").trim()
+            val newName = command.removePrefix("/image ").trim()
             // We verify that it is a valid name (in terms of length) to prevent abusing
             when {
                 newName.isEmpty() -> server.sendTo(id, "server::help", "/image [newImage]")
@@ -539,6 +556,10 @@ private suspend fun receivedMessage(id: String, command: String) {
         // The command 'help' allows users to get a list of available commands.
         command.startsWith("/help") -> server.help(id)
         command.startsWith("/me") -> server.actionMessage(id, command.removePrefix("/me"))
+        command.startsWith("/pm ") -> {
+            val recipient = command.removePrefix("/pm ").split(" ")[0].trim()
+            server.sendTo(recipient, id, command.removePrefix("/pm ").split(" ").drop(1).joinToString { "$it " }.trim())
+        }
         // If no commands matched at this point, we notify about it.
         command.startsWith("/") -> server.sendTo(
             id,

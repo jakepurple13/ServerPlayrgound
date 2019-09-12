@@ -1,44 +1,68 @@
 body {
-    background-color: #f0ffff;
+    /*background-color: #f0ffff;*/
+    background-color: #1b1b1b;
+    color: #1b1b1b;
+    solid-color: #1b1b1b;
 }
+
 .form {
-    position: absolute;
+    /*position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
     height: 60px;
-    padding: 5px;
+    padding: 5px;*/
+    position: relative;
 }
+
 .header {
     /*height: 71px;*/
     padding: 5px;
 }
+
 .messages {
-    position: absolute;
+    /*position: absolute;
     top: 85px;
     left: 5px;
     right: 5px;
     padding: 5px;
-    bottom: 70px;
+    bottom: 70px;*/
+    /*position: relative;
+    height: 80px;*/
+    height: 600px;
+    display: block;
+    border-radius: 5px;
     overflow-y: scroll;
+    padding: 5px;
     border: 1px solid black;
-    background-color: #5e79cb;/*lightyellow;*/
+    background-color: #5e79cb; /*lightyellow;*/
 }
+
 .form label {
     display: block;
     color: #f7861f;
 }
+
 .form input {
     height: 30px;
 }
+
 .form input[type=text] {
     display: block;
-    width: 100%;
+    padding-left: 5px;
+    margin-left: 5px;
+    height: auto;
+    line-break: auto;
+    word-wrap: break-word;
+    text-wrap: normal;
+    overflow-y: scroll;
+    width: 80%;
     box-sizing: border-box;
 }
+
 .form input[type=button] {
     float: right;
-    margin: 0 5px;
+    margin: 5px 5px;
     width: 50px;
     /*border: 1px solid #d3d3d3;*/
     border: 0;
@@ -47,56 +71,81 @@ body {
     color: white;
     transition: background-color 500ms;
 }
+
+.bootstrap_button_locate {
+
+    padding-right: 5px;
+    margin-right: 5px;
+    /*margin: 5px 5px;*/
+}
+
+.bootstrap_text_locate {
+    float: right;
+    margin: 5px 5px;
+    width: 50px;
+}
+
 .form input[type=button]:hover {
     background-color: #679af5;
 }
+
 .form .input-container {
     margin-right: 60px;
 }
 
 
-
 .container {
-  border: 2px solid #dedede;
-  background-color: #f1f1f1;
-  border-radius: 5px;
-  padding: 10px;
-  margin: 10px 0;
+    border: 2px solid #dedede;
+    background-color: #f1f1f1;
+    border-radius: 5px;
+    padding: 10px;
+    margin: 10px 0;
 }
 
 .darker {
-  border-color: #ccc;
-  background-color: #ddd;
+    border-color: #ccc;
+    background-color: #ddd;
 }
 
 .container::after {
-  content: "";
-  clear: both;
-  display: table;
+    content: "";
+    clear: both;
+    display: table;
 }
 
 .container_img {
-  float: left;
-  max-width: 60px;
-  width: 100%;
-  margin-right: 20px;
-  border-radius: 50%;
+    float: left;
+    max-width: 60px;
+    width: 100%;
+    margin-right: 20px;
+    border-radius: 50%;
 }
 
 .container img.right {
-  float: right;
-  margin-left: 20px;
-  margin-right:0;
+    float: right;
+    margin-left: 20px;
+    margin-right: 0;
 }
 
 .time-right {
-  float: right;
-  color: #aaa;
+    float: right;
+    font-size: xx-small;
+    color: #aaa;
 }
 
 .time-left {
-  float: left;
-  color: #999;
+    float: left;
+    font-size: xx-small;
+    color: #999;
+}
+
+.user_list {
+    padding-top: 5px;
+    overflow-y: scroll;
+}
+
+.userShow {
+    color:#ffffff;
 }
 
 .inner {
@@ -104,9 +153,17 @@ body {
     justify-self: start;
 }
 
-.main-grid-container {
+.pm-dark {
+    border-color: #ccc;
+    background-color: #666;
+}
+
+.message-normal {
     border: 2px solid #dedede;
     background-color: #f1f1f1;
+}
+
+.main-grid-container {
     border-radius: 5px;
     padding: 10px;
     margin: 10px 0;
@@ -116,9 +173,14 @@ body {
     grid-template-areas: "profile_image_layer text_layer text_layer";
 }
 
-.profile_image_layer { grid-area: profile_image_layer; }
+.profile_image_layer {
+    grid-area: profile_image_layer;
+}
 
-.text_layer { grid-area: text_layer; }
+.text_layer {
+    grid-area: text_layer;
+    margin-left: 5px;
+}
 
 .profile_image {
     float: left;
@@ -138,8 +200,64 @@ body {
     grid-template-areas: "image_layer title_layer title_layer" "image_layer description_layer description_layer";
 }
 
-.image_layer { grid-area: image_layer; }
+.image_layer {
+    grid-area: image_layer;
+}
 
-.title_layer { grid-area: title_layer; }
+.title_layer {
+    grid-area: title_layer;
+}
 
-.description_layer { grid-area: description_layer; }
+.description_layer {
+    grid-area: description_layer;
+    overflow-y: scroll;
+}
+
+
+/*this is the main area*/
+
+.main-container {
+    display: grid;
+    grid-column-gap: 5px;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
+    grid-template-areas: "messaging_layer messaging_layer user_layer" "messaging_layer messaging_layer user_layer" "send_layer send_layer send_layer";
+}
+
+.messaging_layer {
+    grid-area: messaging_layer;
+}
+
+.user_layer {
+    grid-area: user_layer;
+    overflow-y: scroll
+}
+
+.send_layer {
+    grid-area: send_layer;
+}
+
+
+/*this is the user list area*/
+
+.user-container {
+    display: grid;
+    grid-column-gap: 5px;
+    grid-template-columns: 0.3fr 1fr;
+    grid-template-rows: 1fr;
+    grid-template-areas: "user_image_layer user_name_layer";
+}
+
+.user_image_layer {
+    grid-area: user_image_layer;
+}
+
+.user_name_layer {
+    grid-area: user_name_layer;
+}
+
+.user_image_img {
+    float: left;
+    max-width: 60px;
+    border-radius: 50%;
+}

@@ -1,5 +1,5 @@
 // Global variable to hold the websocket.
-var socket = null;
+let socket = null;
 
 /**
  * This function is in charge of connecting the client.
@@ -9,17 +9,17 @@ function connect() {
     // The socket will be connected automatically asap. Not now but after returning to the event loop,
     // so we can register handlers safely before the connection is performed.
     console.log("Begin connect");
-    socket = new WebSocket("wss://" + window.location.host + "/chat/ws");
+    socket = new WebSocket("ws://" + window.location.host + "/chat/ws");
 
     // We set a handler that will be executed if the socket has any kind of unexpected error.
     // Since this is a just sample, we only report it at the console instead of making more complex things.
-    socket.onerror = function() {
+    socket.onerror = function () {
         console.log("socket error");
     };
 
     // We set a handler upon connection.
     // What this does is to put a text in the messages container notifying about this event.
-    socket.onopen = function() {
+    socket.onopen = function () {
         console.log("Connected");
         //var connected = "{\"user\":{\"name\":\"Server\",\"image\":\"https://www.w3schools.com/w3images/bandmember.jpg\"},\"message\":\"Connected\",\"type\":\"SERVER\"}"
         //write("Connected");
@@ -29,9 +29,9 @@ function connect() {
     // If the connection was closed gracefully (either normally or with a reason from the server),
     // we have this handler to notify to the user via the messages container.
     // Also we will retry a connection after 5 seconds.
-    socket.onclose = function(evt) {
+    socket.onclose = function (evt) {
         // Try to gather an explanation about why this was closed.
-        var explanation = "";
+        let explanation = "";
         if (evt.reason && evt.reason.length > 0) {
             explanation = "reason: " + evt.reason;
         } else {
@@ -39,13 +39,16 @@ function connect() {
         }
 
         // Notify the user using the messages container.
-        write("Disconnected with close code " + evt.code + " and " + explanation);
+
+        let disconnected = "{\"time\":\"Now\",\"user\":{\"name\":\"Server\",\"image\":\"https://www.w3schools.com/w3images/bandmember.jpg\"},\"message\":\"" + "Disconnected with close code " + evt.code + " and " + explanation + "\",\"type\":\"SERVER\"}";
+        write(disconnected);
+        //write("Disconnected");
         // Try to reconnect after 5 seconds.
         setTimeout(connect, 5000);
     };
 
     // If we receive a message from the server, we want to handle it.
-    socket.onmessage = function(event) {
+    socket.onmessage = function (event) {
         console.log(event.data);
         received(event.data.toString());
     };
@@ -61,6 +64,110 @@ function received(message) {
     write(message);
 }
 
+function setUpUserList(userDiv, chatter) {
+    const userContainer = document.createElement("div");
+    userContainer.className = "user-container";
+
+    const pDiv = document.createElement("div");
+    pDiv.className = "user_name_layer";
+    const pTag = document.createElement("p");
+    pTag.innerText = chatter.name;
+    pTag.className = "userShow";
+    pDiv.appendChild(pTag);
+
+    const imageDiv = document.createElement("div");
+    imageDiv.className = "user_image_layer";
+    const userImg = document.createElement("img");
+    userImg.src = chatter.image;
+    userImg.className = "user_image_img";
+    imageDiv.appendChild(userImg);
+
+    userContainer.appendChild(imageDiv);
+    userContainer.appendChild(pDiv);
+
+    userContainer.addEventListener("click", function () {
+        const input = document.getElementById("commandInput");
+        input.value = "/pm " + chatter.name;
+        input.focus();
+    });
+
+    userDiv.appendChild(userContainer);
+}
+
+function messageSetUp(div, obj) {
+    const imgDiv = document.createElement("div");
+    imgDiv.className = "profile_image_layer";
+    const img = document.createElement("img");
+    img.src = obj.user.image;
+    img.className = "container_img";
+    imgDiv.appendChild(img);
+    const timeTag = document.createElement("p");
+    timeTag.className = "time-left";
+    timeTag.innerHTML = obj.time;
+    imgDiv.appendChild(document.createElement("br"));
+    imgDiv.appendChild(timeTag);
+
+    const textDiv = document.createElement("div");
+    textDiv.className = "text_layer inner";
+    const line = document.createElement("p");
+    line.className = "message";
+    line.innerHTML = obj.message;
+    textDiv.appendChild(line);
+    div.appendChild(imgDiv);
+    div.appendChild(textDiv);
+
+    div.className = "main-grid-container";
+    return line;
+}
+
+function episodeSetUp(div, obj) {
+    const episode = JSON.parse(obj.data)[0];
+    div.className = "container";
+
+    const container = document.createElement("div");
+    container.className = "grid-container";
+
+    const imageLayer = document.createElement("div");
+    imageLayer.className = "image_layer";
+    const imgTag = document.createElement("img");
+    imgTag.src = episode.image;
+    imgTag.className = "episode_image";
+    imageLayer.appendChild(imgTag);
+
+    const titleLayer = document.createElement("div");
+    titleLayer.className = "title_layer";
+    const titleTag = document.createElement("p");
+    titleTag.innerHTML = episode.name;
+    titleLayer.appendChild(titleTag);
+
+    const descriptionLayer = document.createElement("div");
+    descriptionLayer.className = "description_layer";
+    const descriptionTag = document.createElement("p");
+    descriptionTag.innerHTML = episode.description;
+    descriptionLayer.appendChild(descriptionTag);
+
+    container.appendChild(descriptionLayer);
+    container.appendChild(titleLayer);
+    container.appendChild(imageLayer);
+
+    container.addEventListener("click", function () {
+        const u = episode.url;
+        openEpisode(u);
+    });
+    div.appendChild(container);
+}
+
+const INFO = "INFO";
+const SERVER = "SERVER";
+const EPISODE = "EPISODE";
+const MESSAGE = "MESSAGE";
+/*enum class ReceivedType {
+    INFO;
+    SYSTEM;
+    EPISODE;
+    MESSAGE;
+}*/
+
 /**
  * Writes a message in the HTML 'messages' container that the user can see.
  *
@@ -73,96 +180,53 @@ function write(message) {
     /*var line = document.createElement("p");
     line.className = "message";
     line.innerHTML = message;*/
-    var obj = JSON.parse(message);
-
-    var div = document.createElement("div");
-    var imgDiv = document.createElement("div");
-    imgDiv.className = "profile_image_layer";
-    var img = document.createElement("img");
-    img.src = obj.user.image;
-    img.style = "width:100%;";
-    img.className = "container_img";
-    imgDiv.appendChild(img);
-    var textDiv = document.createElement("div");
-    textDiv.className = "text_layer inner";
-    var line = document.createElement("p");
-    line.className = "message";
-    line.innerHTML = obj.message;
-    textDiv.appendChild(line);
-    //div.appendChild(img);
-    //div.appendChild(line);
-    div.appendChild(imgDiv);
-    div.appendChild(textDiv);
-    div.className = "main-grid-container darker";
-    if(obj.type==="MESSAGE") {
-
-    } else if(obj.type==="SERVER") {
-
-    } else if(obj.type==="EPISODE") {
-        var episode = JSON.parse(obj.data)[0];
-        div.className = "container";
-
-        var container = document.createElement("div");
-        container.className = "grid-container";
-
-        var imageLayer = document.createElement("div");
-        imageLayer.className = "image_layer";
-        var imgTag = document.createElement("img");
-        imgTag.src = episode.image;
-        imgTag.className = "episode_image";
-        imageLayer.appendChild(imgTag);
-
-        var titleLayer = document.createElement("div");
-        titleLayer.className = "title_layer";
-        var titleTag = document.createElement("p");
-        titleTag.innerHTML = episode.name;
-        titleLayer.appendChild(titleTag);
-
-        var descriptionLayer = document.createElement("div");
-        descriptionLayer.className = "description_layer";
-        var descriptionTag = document.createElement("p");
-        descriptionTag.innerHTML = episode.description;
-        descriptionLayer.appendChild(descriptionTag);
-
-        container.appendChild(descriptionLayer);
-        container.appendChild(titleLayer);
-        container.appendChild(imageLayer);
-
-        container.addEventListener("click", function () {
-            var u = episode.url;
-            if (u.includes("gogoanime")) {
-                type = "g";
-            } else if (u.includes("putlocker")) {
-                type = "p";
-            } else if (u.includes("animetoon")) {
-                type = "a";
-            }
-            var location = u.split("/");
-            var locate = location.filter(x => x !== "").slice(-1)[0];
-            console.log("/nsi/" + type + locate);
-            window.open("/nsi/" + type + locate, '_blank');
-        });
-        div.appendChild(container);
+    const obj = JSON.parse(message);
+    if (obj.type === INFO) {
+        const userDiv = document.getElementById("current_users");
+        while (userDiv.hasChildNodes()) {
+            userDiv.firstChild.remove()
+        }
+        for (let user in obj.data) {
+            let chatter = obj.data[user];
+            console.log(chatter);
+            setUpUserList(userDiv, chatter)
+        }
     } else {
+        const div = document.createElement("div");
 
+        const line = messageSetUp(div, obj);
+
+        if (obj.type === MESSAGE) {
+            if (obj.data === "pm") {
+                div.className += " pm-dark";
+            } else {
+                div.className += " message-normal";
+            }
+        } else if (obj.type === SERVER) {
+            div.className += " message-normal";
+        } else if (obj.type === EPISODE) {
+            episodeSetUp(div, obj)
+        } else {
+
+        }
+
+        // Then we get the 'messages' container that should be available in the HTML itself already.
+        const messagesDiv = document.getElementById("messages");
+        // We adds the text
+        messagesDiv.appendChild(div);
+        // We scroll the container to where this text is so the use can see it on long conversations if he/she has scrolled up.
+        messagesDiv.scrollTop = line.offsetTop;
     }
-
-    // Then we get the 'messages' container that should be available in the HTML itself already.
-    var messagesDiv = document.getElementById("messages");
-    // We adds the text
-    messagesDiv.appendChild(div);
-    // We scroll the container to where this text is so the use can see it on long conversations if he/she has scrolled up.
-    messagesDiv.scrollTop = line.offsetTop;
 }
 
 /**
  * Function in charge of sending the 'commandInput' text to the server via the socket.
  */
 function onSend() {
-    var input = document.getElementById("commandInput");
+    const input = document.getElementById("commandInput");
     // Validates that the input exists
     if (input) {
-        var text = input.value;
+        const text = input.value.trim();
         // Validates that there is a text and that the socket exists
         if (text && socket) {
             // Sends the text
@@ -177,31 +241,31 @@ function onProfileChange() {
 
     console.log("Hello");
 
-    var username = document.getElementById("username_change");
-        // Validates that the input exists
-        if (username) {
-            var text = username.value;
-            // Validates that there is a text and that the socket exists
-            if (text && socket) {
-                // Sends the text
-                socket.send("/user " + text);
-                // Clears the input so the user can type a new command or text to say
-                //username.value = "";
-            }
+    const username = document.getElementById("username_change");
+    // Validates that the input exists
+    if (username) {
+        let text = username.value;
+        // Validates that there is a text and that the socket exists
+        if (text && socket) {
+            // Sends the text
+            socket.send("/user " + text);
+            // Clears the input so the user can type a new command or text to say
+            //username.value = "";
         }
+    }
 
-    var image = document.getElementById("image_change");
-        // Validates that the input exists
-        if (image) {
-            var text = image.value;
-            // Validates that there is a text and that the socket exists
-            if (text && socket) {
-                // Sends the text
-                socket.send("/image " + text);
-                // Clears the input so the user can type a new command or text to say
-                //image.value = "";
-            }
+    const image = document.getElementById("image_change");
+    // Validates that the input exists
+    if (image) {
+        let text = image.value;
+        // Validates that there is a text and that the socket exists
+        if (text && socket) {
+            // Sends the text
+            socket.send("/image " + text);
+            // Clears the input so the user can type a new command or text to say
+            //image.value = "";
         }
+    }
 
 }
 
@@ -214,10 +278,10 @@ function start() {
 
     // If we click the sendButton, let's send the message.
     document.getElementById("sendButton").onclick = onSend;
-
+    // To change information
     document.getElementById("saveChanges").onclick = onProfileChange;
     // If we pressed the 'enter' key being inside the 'commandInput', send the message to improve accessibility and making it nicer.
-    document.getElementById("commandInput").onkeydown = function(e) {
+    document.getElementById("commandInput").onkeydown = function (e) {
         if (e.keyCode === 13) {
             onSend();
         }

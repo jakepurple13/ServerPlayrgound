@@ -1,37 +1,66 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <title>Chat!</title>
     <script type="text/javascript" src="/chat/main.js"></script>
+    <script type="text/javascript" src="/chat/helperUtils.js"></script>
     <link href="/chat/main.css" rel="stylesheet">
-    <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"
+            integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+            integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+            crossorigin="anonymous"></script>
 </head>
-<body>
+<body style="background-color: #1b1b1b;">
 <div class="header">
     <!--<h1>Night chat</h1>-->
     <p>Night chat</p>
 </div>
 
-<!-- The message container that will hold all the events, messages from the server and other users -->
-<div class="messages" id="messages">
-</div>
+<div class="main-container">
+    <div class="user_layer">
+        <!-- Button trigger modal -->
+        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal">
+            Profile
+        </button>
 
-<!-- The form with the text input and the button to send messages -->
-<div class="form">
-    <!-- Button trigger modal -->
-    <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal">
-        Profile
-    </button>
-    <label for="commandInput">Enter message or command (starting from slash /):</label>
-    <input type="button" id="sendButton" value="send">
-    <div class="input-container">
-        <input type="text" id="commandInput">
+        <div id="current_users" class="user_list">
+
+        </div>
+    </div>
+
+    <div class="messaging_layer">
+        <!-- The message container that will hold all the events, messages from the server and other users -->
+        <div class="messages" id="messages">
+        </div>
+    </div>
+    <!-- The form with the text input and the button to send messages -->
+    <div class="send_layer">
+        <div class="form">
+            <label for="commandInput">Enter message or command (starting from slash /):</label>
+            <!--<input type="button" id="sendButton" value="send">
+            <div class="input-container">
+                <input type="text" placeholder="Send message" id="commandInput">
+            </div>-->
+            <div class="input-group mb-3">
+                <!--<div class="input-group">-->
+                    <input type="text" aria-multiline="true" id="commandInput" placeholder="Send message" class="form-control"
+                           aria-label="Small"
+                           aria-describedby="inputGroup-sizing-sm">
+                <!--</div>-->
+                <div class="input-group-append">
+                    <button id="sendButton" value="send" class="btn btn-primary bootstrap_button_locate"><i class="glyphicon glyphicon-remove"></i>Send</button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
 <!-- Modal -->
-<div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+<div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+     aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -45,18 +74,21 @@
                     <div class="input-group-prepend">
                         <span class="input-group-text" id="username_changes">Username</span>
                     </div>
-                    <input type="text" id="username_change" class="form-control" aria-label="Small" aria-describedby="inputGroup-sizing-sm">
+                    <input type="text" id="username_change" class="form-control" aria-label="Small"
+                           aria-describedby="inputGroup-sizing-sm">
                 </div>
                 <div class="input-group input-group-sm mb-3">
                     <div class="input-group-prepend">
                         <span class="input-group-text" id="image_changes">Image</span>
                     </div>
-                    <input type="text" id="image_change" class="form-control" aria-label="Small" aria-describedby="inputGroup-sizing-sm">
+                    <input type="text" id="image_change" class="form-control" aria-label="Small"
+                           aria-describedby="inputGroup-sizing-sm">
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" id="saveChanges" data-dismiss="modal">Save changes</button>
+                <button type="button" class="btn btn-primary" id="saveChanges" data-dismiss="modal">Save changes
+                </button>
             </div>
         </div>
     </div>

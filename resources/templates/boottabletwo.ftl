@@ -37,9 +37,9 @@
             <option value='/api/web/ttoon.json'>Cartoon</option>
             <option value='/api/web/all.json'>All</option>
         </select>
-    </div>
-    <div class="input-group-prepend">
-        <button id="go_to_chat" class="btn btn-primary"><i class="glyphicon glyphicon-remove"></i>Chat</button>
+        <div class="input-group-append">
+            <button id="go_to_chat" class="btn btn-primary"><i class="glyphicon glyphicon-remove"></i>Chat</button>
+        </div>
     </div>
 </div>
 <table
@@ -86,7 +86,7 @@
 <script src="https://unpkg.com/tableexport.jquery.plugin/libs/jsPDF-AutoTable/jspdf.plugin.autotable.js"></script>
 <script src="https://unpkg.com/bootstrap-table@1.15.4/dist/extensions/export/bootstrap-table-export.min.js"></script>
 
-
+<script type="text/javascript" src="/chat/helperUtils.js"></script>
 
 </body>
 <script>
@@ -103,17 +103,7 @@
             var type = "";
             console.log(element[0]);
             var u = element[0].cells[1].innerHTML;
-
-            if (u.includes("gogoanime")) {
-                type = "g";
-            } else if (u.includes("putlocker")) {
-                type = "p";
-            } else if (u.includes("animetoon")) {
-                type = "a";
-            }
-            var location = u.split("/");
-            var locate = location.filter(x => x !== "").slice(-1)[0];
-            window.open("/nsi/" + type + locate, '_blank');
+            openEpisode(u);
         }});
 
     $('#remove').click(function () {
