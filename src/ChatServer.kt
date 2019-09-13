@@ -1,14 +1,20 @@
 package com.example
 
 import com.google.gson.Gson
-import io.ktor.http.cio.websocket.*
-import kotlinx.coroutines.channels.*
+import io.ktor.http.cio.websocket.CloseReason
+import io.ktor.http.cio.websocket.Frame
+import io.ktor.http.cio.websocket.WebSocketSession
+import io.ktor.http.cio.websocket.close
+import kotlinx.coroutines.channels.ClosedSendChannelException
+import kotlinx.html.*
+import kotlinx.html.stream.createHTML
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.text.SimpleDateFormat
 import java.util.*
-import java.util.concurrent.*
-import java.util.concurrent.atomic.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicInteger
 
 
 class ChatUser(var name: String, var image: String = "https://www.w3schools.com/w3images/bandmember.jpg")
@@ -41,6 +47,8 @@ class ChatServer {
      */
     val lastMessages = LinkedList<SendMessage>()
 
+    val peopleWhoAreTyping = ConcurrentHashMap<String, Boolean>()
+
     /**
      * Handles that a member identified with a session id and a socket joined.
      */
@@ -61,7 +69,7 @@ class ChatServer {
             //broadcast("server", "Member joined: $name.")
             broadcastUserUpdate()
             //val text = "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} Connected"
-            val sendMessage = SendMessage(ChatUser("Server"), "Connected", MessageType.SERVER)
+            val sendMessage = SendMessage(ChatUser("Server"), "Connected as ${name.name}", MessageType.SERVER)
             members[member]?.send(Frame.Text(sendMessage.toJson()))
 
         }
@@ -140,7 +148,11 @@ class ChatServer {
      */
     suspend fun help(sender: String) {
         //val text = "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} [server::help] Possible commands are: /user, /help, /me and /who"
-        val sendMessage = SendMessage(ChatUser("Server"), "[server::help] Possible commands are: /user, /help, /me and /who", MessageType.SERVER)
+        val sendMessage = SendMessage(
+            ChatUser("Server"),
+            "[server::help] Possible commands are: /user, /help, /me and /who",
+            MessageType.SERVER
+        )
         members[sender]?.send(Frame.Text(sendMessage.toJson()))
         //members[sender]?.send(Frame.Text("[server::help] Possible commands are: /user, /help, /me and /who"))
         /*broadcast(
@@ -152,7 +164,7 @@ class ChatServer {
     }
 
     private fun getMemberByUsername(userName: String) = memberNames.search(1L) { id, user ->
-        if(user.name == userName)
+        if (user.name == userName)
             id
         else
             null
@@ -168,12 +180,12 @@ class ChatServer {
         prettyLog(members.keys.joinToString(", "))
         prettyLog(memberNames.keys.joinToString(", "))
         val sendToUser = getMemberByUsername(recipient)
-        if(sendToUser==null) {
+        if (sendToUser == null) {
             val sendMessage = SendMessage(ChatUser("Server"), "User not found", MessageType.SERVER)
             members[sender]?.send(Frame.Text(sendMessage.toJson()))
         } else {
             val user = memberNames[sender]!!
-            val sendMessage = SendMessage(user, "[${user.name}] $message", MessageType.MESSAGE, data = "pm")
+            val sendMessage = SendMessage(user, "[${user.name} => $recipient] $message", MessageType.MESSAGE, data = "pm")
             members[sendToUser]?.send(Frame.Text(sendMessage.toJson()))
             members[sender]?.send(Frame.Text(sendMessage.toJson()))
             //members[recipient]?.send(Frame.Text("[$sender] $message"))
@@ -232,7 +244,7 @@ class ChatServer {
     suspend fun actionMessage(sender: String, message: String) {
         // Pre-format the message to be send, to prevent doing it for all the users or connected sockets.
         val name = memberNames[sender]?.name ?: sender
-        val formatted = "<i>$name $message</i>"
+        val formatted = "<i>$name$message</i>"
 
         // Sends this pre-formatted message to all the members in the server.
         broadcast(sender, formatted, MessageType.MESSAGE)
@@ -242,27 +254,55 @@ class ChatServer {
     }
 
     enum class MessageType {
-        MESSAGE, EPISODE, SERVER, INFO
+        MESSAGE, EPISODE, SERVER, INFO, TYPING_INDICATOR, DOWNLOADING, PREVIEW
     }
 
-    /*data class SendMessage(val user: ChatUser, val message: String, val type: MessageType?, val data: String? = null) {
-        fun toJson(): String = Gson().toJson(this)
-    }*/
+    suspend fun downloadMessages(sender: String) {
+        val html = createHTML(true, xhtmlCompatible = true)
+            .html {
+                body {
+                    table {
+                        lastMessages.forEach { info ->
+                            tr {
+                                td {
+                                    unsafe {
+                                        +"${info.time} ${info.message}"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        val sendMessage = SendMessage(ChatUser("Server"), "", MessageType.DOWNLOADING, html)
+        members[sender]?.send(Frame.Text(sendMessage.toJson()))
+    }
+
+    suspend fun previewMessage(sender: String, message: PreviewText) {
+        val sendMessage = SendMessage(memberNames[sender]!!, message.text, MessageType.PREVIEW)
+        members[sender]?.send(Frame.Text(sendMessage.toJson()))
+    }
+
+    suspend fun isTyping(sender: String, typingIndicator: TypingIndicator) {
+        peopleWhoAreTyping[sender] = typingIndicator.isTyping
+        val people = peopleWhoAreTyping.filter { it.value }.map { memberNames[it.key]!!.name }
+        val peopleToShow = if (people.size > 3) "People" else people.joinToString(", ")
+        val check = typingIndicator.isTyping || people.isNotEmpty()
+        val text = if (check) "$peopleToShow are typing..." else ""
+        val sendMessage = SendMessage(ChatUser("Server"), text, MessageType.TYPING_INDICATOR).toJson()
+        members.forEach {
+            it.value.send(Frame.Text(sendMessage))
+        }
+    }
 
     data class SendMessage(val user: ChatUser, val message: String, val type: MessageType?, val data: Any? = null) {
-        private val time = SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())
+        val time = SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())
 
         fun toJson(): String = Gson().toJson(this)
     }
 
     suspend fun sendServerMessage(msg: String) {
-        broadcast(
-            SendMessage(
-                ChatUser("Server"),
-                msg,
-                MessageType.SERVER
-            ).toJson()
-        )
+        broadcast(SendMessage(ChatUser("Server"), msg, MessageType.SERVER).toJson())
     }
 
     /**
@@ -283,14 +323,14 @@ class ChatServer {
                 memberNames.values.joinToString("\n") { it.name }
             ).toJson()))
         }*/
-
+        val message = SendMessage(
+            ChatUser("Server"),
+            "",
+            MessageType.INFO,
+            memberNames.values
+        ).toJson()
         members.values.forEach { sockets ->
-            sockets.send(Frame.Text(SendMessage(
-                ChatUser("Server"),
-                "",
-                MessageType.INFO,
-                memberNames.values
-            ).toJson()))
+            sockets.send(Frame.Text(message))
         }
     }
 
@@ -315,10 +355,12 @@ class ChatServer {
         val sendMessage = SendMessage(memberNames[sender] ?: ChatUser("Server"), message, type, data)
         broadcast(sendMessage.toJson())
         prettyLog(sendMessage.toJson())
-        synchronized(lastMessages) {
-            lastMessages.add(sendMessage)
-            if (lastMessages.size > 100) {
-                lastMessages.removeFirst()
+        if (type != MessageType.TYPING_INDICATOR) {
+            synchronized(lastMessages) {
+                lastMessages.add(sendMessage)
+                if (lastMessages.size > 100) {
+                    lastMessages.removeFirst()
+                }
             }
         }
     }

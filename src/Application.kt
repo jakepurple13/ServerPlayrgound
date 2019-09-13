@@ -5,6 +5,7 @@ package com.example
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import com.fasterxml.jackson.databind.SerializationFeature
+import com.google.gson.Gson
 import freemarker.cache.ClassTemplateLoader
 import io.ktor.application.Application
 import io.ktor.application.ApplicationCallPipeline
@@ -515,59 +516,91 @@ private val server = ChatServer()
  */
 data class ChatSession(val id: String)
 
+data class Action(val type: String, val json: String)
+
+data class TypingIndicator(val isTyping: Boolean)
+
+data class DownloadMessages(val download: Boolean)
+
+data class PreviewText(val text: String)
+
 /**
  * We received a message. Let's process it.
  */
 private suspend fun receivedMessage(id: String, command: String) {
     // We are going to handle commands (text starting with '/') and normal messages
-    when {
-        // The command `who` responds the user about all the member names connected to the user.
-        command.startsWith("/who") -> server.who(id)
-        // The command `user` allows the user to set its name.
-        command.startsWith("/user ") -> {
-            // We strip the command part to get the rest of the parameters.
-            // In this case the only parameter is the user's newName.
-            val newName = command.removePrefix("/user").trim()
-            // We verify that it is a valid name (in terms of length) to prevent abusing
-            when {
-                newName.isEmpty() -> server.sendTo(id, "server::help", "/user [newName]")
-                newName.length > 50 -> server.sendTo(
+    prettyLog(command)
+    try {
+
+        val action = Gson().fromJson<Action>(command, Action::class.java)
+        when(action.type) {
+            "Typing" -> {
+                val typing = Gson().fromJson<TypingIndicator>(action.json, TypingIndicator::class.java)
+                server.isTyping(id, typing)
+            }
+            "Download" -> {
+                //val download = Gson().fromJson<DownloadMessages>(action.json, DownloadMessages::class.java)
+                server.downloadMessages(id)
+            }
+            "Preview" -> {
+                val preview = Gson().fromJson<PreviewText>(action.json, PreviewText::class.java)
+                server.previewMessage(id, preview)
+            }
+        }
+    } catch (e: Exception) {
+        when {
+            // The command `who` responds the user about all the member names connected to the user.
+            command.startsWith("/who") -> server.who(id)
+            // The command `user` allows the user to set its name.
+            command.startsWith("/user ") -> {
+                // We strip the command part to get the rest of the parameters.
+                // In this case the only parameter is the user's newName.
+                val newName = command.removePrefix("/user").trim()
+                // We verify that it is a valid name (in terms of length) to prevent abusing
+                when {
+                    newName.isEmpty() -> server.sendTo(id, "server::help", "/user [newName]")
+                    newName.length > 50 -> server.sendTo(
+                        id,
+                        "server::help",
+                        "new name is too long: 50 characters limit"
+                    )
+                    else -> server.memberRenamed(id, newName)
+                }
+            }
+            command.startsWith("/show ") -> {
+                val showName = command.removePrefix("/show")
+                server.getShow(DbSettings.db, showName, id)
+            }
+            command.startsWith("/image ") -> {
+                // We strip the command part to get the rest of the parameters.
+                // In this case the only parameter is the user's newName.
+                val newName = command.removePrefix("/image ").trim()
+                // We verify that it is a valid name (in terms of length) to prevent abusing
+                when {
+                    newName.isEmpty() -> server.sendTo(id, "server::help", "/image [newImage]")
+                    else -> server.memberImageChange(id, newName)
+                }
+            }
+            // The command 'help' allows users to get a list of available commands.
+            command.startsWith("/help") -> server.help(id)
+            command.startsWith("/me") -> server.actionMessage(id, command.removePrefix("/me"))
+            command.startsWith("/pm ") -> {
+                val recipient = command.removePrefix("/pm ").split(" ")[0].trim()
+                server.sendTo(
+                    recipient,
                     id,
-                    "server::help",
-                    "new name is too long: 50 characters limit"
+                    command.removePrefix("/pm ").split(" ").drop(1).joinToString { "$it " }.trim()
                 )
-                else -> server.memberRenamed(id, newName)
             }
+            // If no commands matched at this point, we notify about it.
+            command.startsWith("/") -> server.sendTo(
+                id,
+                "server::help",
+                "Unknown command ${command.takeWhile { !it.isWhitespace() }}"
+            )
+            // Handle a normal message.
+            else -> server.message(id, command)
         }
-        command.startsWith("/show ") -> {
-            val showName = command.removePrefix("/show")
-            server.getShow(DbSettings.db, showName, id)
-        }
-        command.startsWith("/image ") -> {
-            // We strip the command part to get the rest of the parameters.
-            // In this case the only parameter is the user's newName.
-            val newName = command.removePrefix("/image ").trim()
-            // We verify that it is a valid name (in terms of length) to prevent abusing
-            when {
-                newName.isEmpty() -> server.sendTo(id, "server::help", "/image [newImage]")
-                else -> server.memberImageChange(id, newName)
-            }
-        }
-        // The command 'help' allows users to get a list of available commands.
-        command.startsWith("/help") -> server.help(id)
-        command.startsWith("/me") -> server.actionMessage(id, command.removePrefix("/me"))
-        command.startsWith("/pm ") -> {
-            val recipient = command.removePrefix("/pm ").split(" ")[0].trim()
-            server.sendTo(recipient, id, command.removePrefix("/pm ").split(" ").drop(1).joinToString { "$it " }.trim())
-        }
-        // If no commands matched at this point, we notify about it.
-        command.startsWith("/") -> server.sendTo(
-            id,
-            "server::help",
-            "Unknown command ${command.takeWhile { !it.isWhitespace() }}"
-        )
-        // Handle a normal message.
-        else -> server.message(id, command)
     }
 }
 

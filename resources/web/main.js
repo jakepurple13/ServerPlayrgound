@@ -1,6 +1,7 @@
 // Global variable to hold the websocket.
 let socket = null;
-
+let disconnectMessage = false;
+let previewMessage = false;
 /**
  * This function is in charge of connecting the client.
  */
@@ -24,6 +25,7 @@ function connect() {
         //var connected = "{\"user\":{\"name\":\"Server\",\"image\":\"https://www.w3schools.com/w3images/bandmember.jpg\"},\"message\":\"Connected\",\"type\":\"SERVER\"}"
         //write("Connected");
         //write(connected);
+        disconnectMessage = false;
     };
 
     // If the connection was closed gracefully (either normally or with a reason from the server),
@@ -39,9 +41,11 @@ function connect() {
         }
 
         // Notify the user using the messages container.
-
-        let disconnected = "{\"time\":\"Now\",\"user\":{\"name\":\"Server\",\"image\":\"https://www.w3schools.com/w3images/bandmember.jpg\"},\"message\":\"" + "Disconnected with close code " + evt.code + " and " + explanation + "\",\"type\":\"SERVER\"}";
-        write(disconnected);
+        if (!disconnectMessage) {
+            let disconnected = "{\"time\":\"Now\",\"user\":{\"name\":\"Server\",\"image\":\"https://www.w3schools.com/w3images/bandmember.jpg\"},\"message\":\"" + "Disconnected with close code " + evt.code + " and " + explanation + "\",\"type\":\"SERVER\"}";
+            write(disconnected);
+            disconnectMessage = true;
+        }
         //write("Disconnected");
         // Try to reconnect after 5 seconds.
         setTimeout(connect, 5000);
@@ -87,7 +91,7 @@ function setUpUserList(userDiv, chatter) {
 
     userContainer.addEventListener("click", function () {
         const input = document.getElementById("commandInput");
-        input.value = "/pm " + chatter.name;
+        input.value = "/pm " + chatter.name + " ";
         input.focus();
     });
 
@@ -161,6 +165,10 @@ const INFO = "INFO";
 const SERVER = "SERVER";
 const EPISODE = "EPISODE";
 const MESSAGE = "MESSAGE";
+const TYPING_INDICATOR = "TYPING_INDICATOR";
+const DOWNLOADING = "DOWNLOADING";
+const PREVIEW = "PREVIEW";
+
 /*enum class ReceivedType {
     INFO;
     SYSTEM;
@@ -181,7 +189,14 @@ function write(message) {
     line.className = "message";
     line.innerHTML = message;*/
     const obj = JSON.parse(message);
-    if (obj.type === INFO) {
+    if(obj.type===PREVIEW) {
+        document.getElementById("preview_message").innerHTML = obj.message;
+    } else if(obj.type===DOWNLOADING) {
+        console.log(obj.data);
+    } else if(obj.type === TYPING_INDICATOR) {
+        const typingTag = document.getElementById("typing_indicate");
+        typingTag.innerText = obj.message;
+    } else if (obj.type === INFO) {
         const userDiv = document.getElementById("current_users");
         while (userDiv.hasChildNodes()) {
             userDiv.firstChild.remove()
@@ -237,9 +252,20 @@ function onSend() {
     }
 }
 
-function onProfileChange() {
+function onSendTyping() {
+    const input = document.getElementById("commandInput");
+    // Validates that the input exists
+    if (input) {
+        const text = input.value.trim();
+        // Validates that there is a text and that the socket exists
+        let typing = {
+            isTyping: text.length!==0 && socket.readyState===1 && !text.includes("/pm")
+        };
+        actionSend("Typing", typing);
+    }
+}
 
-    console.log("Hello");
+function onProfileChange() {
 
     const username = document.getElementById("username_change");
     // Validates that the input exists
@@ -266,7 +292,34 @@ function onProfileChange() {
             //image.value = "";
         }
     }
+}
 
+function onDownloadMessages() {
+    let downloading = {
+        download: true
+    };
+    actionSend("Download", downloading);
+}
+
+function onPreviewMessage() {
+    if(!previewMessage) {
+        let preview = {
+            text: document.getElementById("commandInput").value.trim()
+        };
+        actionSend("Preview", preview);
+    } else {
+        document.getElementById("preview_message").innerHTML = "";
+    }
+}
+
+function actionSend(type, data) {
+    if (socket) {
+        let d = {
+            type: type,
+            json: JSON.stringify(data)
+        };
+        socket.send(JSON.stringify(d));
+    }
 }
 
 /**
@@ -280,12 +333,25 @@ function start() {
     document.getElementById("sendButton").onclick = onSend;
     // To change information
     document.getElementById("saveChanges").onclick = onProfileChange;
+    //to download all the messages
+    document.getElementById("download_messages").onclick = onDownloadMessages;
+    //to preview your message
+    document.getElementById("preview_text").onclick = onPreviewMessage;
     // If we pressed the 'enter' key being inside the 'commandInput', send the message to improve accessibility and making it nicer.
-    document.getElementById("commandInput").onkeydown = function (e) {
+    /*document.getElementById("commandInput").onkeydown = function (e) {
+        if (e.keyCode === 13) {
+            onSend();
+        } else {
+            //onSendTyping();
+        }
+    };*/
+    document.getElementById("commandInput").onkeyup= function (e) {
         if (e.keyCode === 13) {
             onSend();
         }
+        onSendTyping();
     };
+
 }
 
 /**

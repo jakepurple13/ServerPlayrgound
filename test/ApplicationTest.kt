@@ -1,19 +1,10 @@
 package com.example
 
-import io.ktor.application.*
-import io.ktor.response.*
-import io.ktor.request.*
-import io.ktor.routing.*
-import io.ktor.http.*
-import io.ktor.html.*
+import io.ktor.html.HtmlContent
+import io.ktor.http.HttpStatusCode
 import kotlinx.html.*
-import kotlinx.css.*
-import io.ktor.features.*
-import io.ktor.auth.*
-import com.fasterxml.jackson.databind.*
-import io.ktor.jackson.*
-import kotlin.test.*
-import io.ktor.server.testing.*
+import kotlinx.html.stream.createHTML
+import kotlin.test.Test
 
 class ApplicationTest {
     @Test
@@ -24,5 +15,31 @@ class ApplicationTest {
                 assertEquals("HELLO WORLD!", response.content)
             }
         }*/
+        val s = HtmlContent(HttpStatusCode.OK) {
+            addElements()
+        }
+        prettyLog(s)
+        val html = createHTML(true, xhtmlCompatible = true)
+            .html {
+                addElements()
+            }
+        prettyLog(html)
+    }
+
+    private fun HTML.addElements() {
+        val list = listOf("asdf", "asdf", "<i>asdf</i>")
+        body {
+            table {
+                list.forEach { info ->
+                    tr {
+                        td {
+                            unsafe {
+                                +info
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }

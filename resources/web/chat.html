@@ -16,15 +16,24 @@
 <body style="background-color: #1b1b1b;">
 <div class="header">
     <!--<h1>Night chat</h1>-->
-    <p>Night chat</p>
+    <!--<p>Night chat</p>-->
 </div>
 
 <div class="main-container">
     <div class="user_layer">
         <!-- Button trigger modal -->
-        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal">
-            Profile
-        </button>
+        <div class="input-group mb-3">
+            <div class="input-group-prepend">
+                <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal">
+                    Profile
+                </button>
+            </div>
+            <div class="input-group-append">
+                <button type="button" class="btn btn-primary" id="download_messages">
+                    Download Messages
+                </button>
+            </div>
+        </div>
 
         <div id="current_users" class="user_list">
 
@@ -39,17 +48,30 @@
     <!-- The form with the text input and the button to send messages -->
     <div class="send_layer">
         <div class="form">
-            <label for="commandInput">Enter message or command (starting from slash /):</label>
+            <div class="input-group mb-3">
+                <label for="commandInput">Enter message or command (starting from slash /):</label>
+                <br />
+                <label id="typing_indicate"></label>
+                <button id="preview_text" class="btn btn-primary bootstrap_button_locate">
+                    <i class="glyphicon glyphicon-remove"></i>Preview
+                </button>
+            </div>
+            <label id="preview_message"></label>
             <!--<input type="button" id="sendButton" value="send">
             <div class="input-container">
                 <input type="text" placeholder="Send message" id="commandInput">
             </div>-->
             <div class="input-group mb-3">
-                    <input type="text" aria-multiline="true" id="commandInput" placeholder="Send message" class="form-control"
-                           aria-label="Small"
-                           aria-describedby="inputGroup-sizing-sm">
+                    <!--<input type="text" id="commandInput" placeholder="Send message" class="form-control"
+                              aria-label="Small"
+                              aria-describedby="inputGroup-sizing-sm">-->
+                <textarea id="commandInput" placeholder="Send message" class="form-control"
+                       aria-label="Small"
+                          aria-describedby="inputGroup-sizing-sm"></textarea>
                 <div class="input-group-append">
-                    <button id="sendButton" value="send" class="btn btn-primary bootstrap_button_locate"><i class="glyphicon glyphicon-remove"></i>Send</button>
+                    <button id="sendButton" value="send" class="btn btn-primary bootstrap_button_locate"><i
+                            class="glyphicon glyphicon-remove"></i>Send
+                    </button>
                 </div>
             </div>
         </div>
