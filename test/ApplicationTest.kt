@@ -7,6 +7,21 @@ import kotlinx.html.stream.createHTML
 import kotlin.test.Test
 
 class ApplicationTest {
+
+    @Test
+    fun genericEnumTest() {
+        randomEnum<Source>().apply { prettyLog(this) }
+        Source.values().random().apply { prettyLog(this) }
+        Source::class.random().apply { prettyLog(this) }
+
+        randomEnum<ChatServer.MessageType>().apply { prettyLog(this) }
+        ChatServer.MessageType.values().random().apply { prettyLog(this) }
+        ChatServer.MessageType::class.random().apply { prettyLog(this) }
+
+
+
+    }
+
     @Test
     fun testRoot() {
         /*withTestApplication({ module(testing = true) }) {

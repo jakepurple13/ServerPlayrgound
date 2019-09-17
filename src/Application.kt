@@ -33,21 +33,20 @@ import io.ktor.http.content.static
 import io.ktor.jackson.jackson
 import io.ktor.request.receive
 import io.ktor.response.respond
-import io.ktor.routing.get
-import io.ktor.routing.post
-import io.ktor.routing.route
-import io.ktor.routing.routing
+import io.ktor.routing.*
 import io.ktor.sessions.*
 import io.ktor.util.generateNonce
 import io.ktor.websocket.WebSockets
 import io.ktor.websocket.webSocket
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.consumeEach
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.css.html
 import kotlinx.html.*
-import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.like
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.text.SimpleDateFormat
 import java.time.Duration
@@ -78,6 +77,9 @@ fun Application.module() {
         //createEverything(db, ShowApi(Source.RECENT_CARTOON).showInfoList)
         //prettyLog(ShowApi(Source.LIVE_ACTION_MOVIES).showInfoList)
         //createEverything(db, ShowApi.getSources(Source.ANIME, Source.DUBBED, Source.CARTOON, Source.CARTOON_MOVIES))
+
+        //createEverything(db, ShowApi.getSources(Source.ANIME, Source.CARTOON, Source.DUBBED, Source.LIVE_ACTION))
+        //createEverything(db, ShowApi.getSources(Source.CARTOON_MOVIES, Source.LIVE_ACTION_MOVIES))
     }
 
     /*GlobalScope.launch {
@@ -332,7 +334,8 @@ fun Application.module() {
                         call.respond(s)
                     }
                 }
-                get("/t{type}.json") {
+                this@route.getShowType(db)
+                /*get("/t{type}.json") {
                     val type = call.parameters["type"]!!
                     var list = listOf<ShowInfo>()
                     transaction(db) {
@@ -341,7 +344,7 @@ fun Application.module() {
                         //list = Show.find { Shows.url like "%$type%" }.sortedBy { it.name }.map { ShowInfo(it.name, it.url) }
                     }
                     call.respond(list)
-                }
+                }*/
             }
             route("/user") {
                 get("/all.json") {
@@ -399,8 +402,8 @@ fun Application.module() {
                         call.respond(mapOf("Shows" to synchronized(s) { s.toList() }))
                     }
                 }
-
-                get("/t{type}.json") {
+                this@route.getShowType(db)
+                /*get("/t{type}.json") {
                     val type = call.parameters["type"]!!
                     var list = listOf<ShowInfo>()
                     transaction(db) {
@@ -409,7 +412,7 @@ fun Application.module() {
                         //list = Show.find { Shows.url like "%$type%" }.sortedBy { it.name }.map { ShowInfo(it.name, it.url) }
                     }
                     call.respond(list)
-                }
+                }*/
             }
         }
         route("/updateShows") {
@@ -458,6 +461,17 @@ fun Application.module() {
         }
     }
 
+}
+
+fun Route.getShowType(db: Database) = get("/t{type}.json") {
+    val type = call.parameters["type"]!!
+    var list = listOf<ShowInfo>()
+    transaction(db) {
+        list = Shows.select { Shows.url like "%$type%" }.map { ShowInfo(it[Shows.name], it[Shows.url]) }
+            .sortedBy { it.name }
+        //list = Show.find { Shows.url like "%$type%" }.sortedBy { it.name }.map { ShowInfo(it.name, it.url) }
+    }
+    call.respond(list)
 }
 
 data class PostSnippet(val snippet: PostSnippet.Text) {
@@ -517,11 +531,8 @@ private val server = ChatServer()
 data class ChatSession(val id: String)
 
 data class Action(val type: String, val json: String)
-
 data class TypingIndicator(val isTyping: Boolean)
-
 data class DownloadMessages(val download: Boolean)
-
 data class PreviewText(val text: String)
 
 /**
@@ -605,7 +616,6 @@ private suspend fun receivedMessage(id: String, command: String) {
 }
 
 //--------------------------
-
 
 fun prettyLog(msg: Any?) {
     //the main message to be logged

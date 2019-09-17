@@ -2,6 +2,9 @@
 let socket = null;
 let disconnectMessage = false;
 let previewMessage = false;
+
+let retryAttempts = 0;
+
 /**
  * This function is in charge of connecting the client.
  */
@@ -26,6 +29,7 @@ function connect() {
         //write("Connected");
         //write(connected);
         disconnectMessage = false;
+        retryAttempts = 0;
     };
 
     // If the connection was closed gracefully (either normally or with a reason from the server),
@@ -48,7 +52,12 @@ function connect() {
         }
         //write("Disconnected");
         // Try to reconnect after 5 seconds.
-        setTimeout(connect, 5000);
+        if(retryAttempts<=5) {
+            retryAttempts++;
+            setTimeout(connect, 5000);
+        } else {
+            alert("Please refresh the window to try to reconnect")
+        }
     };
 
     // If we receive a message from the server, we want to handle it.
@@ -168,13 +177,6 @@ const MESSAGE = "MESSAGE";
 const TYPING_INDICATOR = "TYPING_INDICATOR";
 const DOWNLOADING = "DOWNLOADING";
 const PREVIEW = "PREVIEW";
-
-/*enum class ReceivedType {
-    INFO;
-    SYSTEM;
-    EPISODE;
-    MESSAGE;
-}*/
 
 /**
  * Writes a message in the HTML 'messages' container that the user can see.
@@ -302,13 +304,22 @@ function onDownloadMessages() {
 }
 
 function onPreviewMessage() {
-    if(!previewMessage) {
-        let preview = {
-            text: document.getElementById("commandInput").value.trim()
-        };
-        actionSend("Preview", preview);
+    if(document.getElementById("commandInput").value.trim()) {
+        if (!previewMessage) {
+            let preview = {
+                text: document.getElementById("commandInput").value.trim()
+            };
+            actionSend("Preview", preview);
+            $('.collapse').collapse('show');
+        } else {
+            document.getElementById("preview_message").innerHTML = "";
+            $('.collapse').collapse('hide');
+        }
+        previewMessage = !previewMessage;
     } else {
+        previewMessage = false;
         document.getElementById("preview_message").innerHTML = "";
+        $('.collapse').collapse('hide');
     }
 }
 

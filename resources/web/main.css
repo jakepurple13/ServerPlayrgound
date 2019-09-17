@@ -34,11 +34,12 @@ body {
     /*position: relative;
     height: 80px;*/
     /*height: 600px;*/
-    position: relative;
+    /*position: relative;
     bottom: 0;
     left: 0;
     right: 0;
-    height: 600px;
+    height: 600px;*/
+    height: calc(100% - 300px);
     /*top: auto;*/
     display: block;
     border-radius: 5px;
@@ -67,8 +68,6 @@ body {
     width: 80%;
     box-sizing: border-box;
 }
-
-
 
 /*.form input[type=button] {
     float: right;
@@ -229,22 +228,37 @@ body {
 .main-container {
     display: grid;
     grid-column-gap: 5px;
-    grid-template-columns: 1fr 1fr 1fr;
+    /*grid-template-columns: 1fr 1fr 1fr;*/
+    grid-template-columns: 33% 33% 33%;
     grid-template-rows: 1fr 1fr 1fr;
     grid-template-areas: "messaging_layer messaging_layer user_layer" "messaging_layer messaging_layer user_layer" "send_layer send_layer send_layer";
 }
 
 .messaging_layer {
     grid-area: messaging_layer;
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    right: 33%;
 }
 
 .user_layer {
     grid-area: user_layer;
-    overflow-y: scroll
+    overflow-y: scroll;
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
 }
 
 .send_layer {
     grid-area: send_layer;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: 0;
 }
 
 

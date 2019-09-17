@@ -27,34 +27,42 @@ class ChatServer {
     /**
      * Atomic counter used to get unique user-names based on the maximum users the server had.
      */
-    val usersCounter = AtomicInteger()
+    private val usersCounter = AtomicInteger()
 
     /**
      * A concurrent map associating session IDs to user names.
      */
-    val memberNames = ConcurrentHashMap<String, ChatUser>()
+    private val memberNames = ConcurrentHashMap<String, ChatUser>()
 
     /**
      * Associates a session-id to a set of websockets.
      * Since a browser is able to open several tabs and windows with the same cookies and thus the same session.
      * There might be several opened sockets for the same client.
      */
-    val members = ConcurrentHashMap<String, MutableList<WebSocketSession>>()
+    private val members = ConcurrentHashMap<String, MutableList<WebSocketSession>>()
 
     /**
      * A list of the latest messages sent to the server, so new members can have a bit context of what
      * other people was talking about before joining.
      */
-    val lastMessages = LinkedList<SendMessage>()
+    private val lastMessages = LinkedList<SendMessage>()
 
-    val peopleWhoAreTyping = ConcurrentHashMap<String, Boolean>()
+    private val peopleWhoAreTyping = ConcurrentHashMap<String, Boolean>()
 
     /**
      * Handles that a member identified with a session id and a socket joined.
      */
     suspend fun memberJoin(member: String, socket: WebSocketSession) {
         // Checks if this user is already registered in the server and gives him/her a temporal name if required.
-        val name = memberNames.computeIfAbsent(member) { ChatUser("user${usersCounter.incrementAndGet()}") }
+        //val name = memberNames.computeIfAbsent(member) { ChatUser("user${usersCounter.incrementAndGet()}") }
+        val name = memberNames.computeIfAbsent(member) {
+            usersCounter.incrementAndGet()
+            var n = randomName()
+            while(memberNames.values.any { it.name==n }) {
+                n = randomName()
+            }
+            ChatUser(n)
+        }
 
         // Associates this socket to the member id.
         // Since iteration is likely to happen more frequently than adding new items,
@@ -296,8 +304,7 @@ class ChatServer {
     }
 
     data class SendMessage(val user: ChatUser, val message: String, val type: MessageType?, val data: Any? = null) {
-        val time = SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())
-
+        val time = SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())!!
         fun toJson(): String = Gson().toJson(this)
     }
 
@@ -368,7 +375,7 @@ class ChatServer {
     /**
      * Sends a [message] to a list of [this] [WebSocketSession].
      */
-    suspend fun List<WebSocketSession>.send(frame: Frame) {
+    private suspend fun List<WebSocketSession>.send(frame: Frame) {
         forEach {
             try {
                 it.send(frame.copy())

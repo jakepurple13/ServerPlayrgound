@@ -1,3 +1,5 @@
+@file:Suppress("RegExpRedundantEscape")
+
 package com.example
 
 import com.google.gson.Gson
@@ -66,19 +68,19 @@ class ShowApi(private val source: Source) {
             return a + c + cm + d + l
         }
 
-        fun getSources(vararg source: Source): List<ShowInfo> {
-            val list = arrayListOf<ShowInfo>()
-            source.forEach {
-                list+=ShowApi(it).showInfoList
-            }
-            return list.toList()
-        }
-
         fun getAllMovies(): List<ShowInfo> {
             val cartoon = ShowApi(Source.CARTOON_MOVIES).showInfoList.toList()
             val anime = ShowApi(Source.ANIME_MOVIES).showInfoList.toList()
             val live = ShowApi(Source.LIVE_ACTION_MOVIES).showInfoList.toList()
             return cartoon + anime + live
+        }
+
+        fun getSources(vararg source: Source): List<ShowInfo> {
+            val list = arrayListOf<ShowInfo>()
+            source.forEach {
+                list += ShowApi(it).showInfoList
+            }
+            return list.toList()
         }
 
         fun getAllRecent(): List<ShowInfo> {
@@ -182,42 +184,43 @@ class ShowApi(private val source: Source) {
     }
 
     private fun getRecentList(): ArrayList<ShowInfo> {
-        return if (source.link.contains("gogoanime")) {
-            gogoAnimeRecent()
-        } else if (source.link.contains("putlocker")) {
-            val listOfStuff = doc.allElements.select("div.col-6")
-            val list = arrayListOf<ShowInfo>()
-            for (i in listOfStuff) {
-                val url = i.select("a.thumbnail").attr("abs:href")
-                list.add(
-                    ShowInfo(
-                        i.select("span.mov_title").text(),
-                        url.substring(0, url.indexOf("season", ignoreCase = true))
+        return when {
+            source.link.contains("gogoanime") -> gogoAnimeRecent()
+            source.link.contains("putlocker") -> {
+                val listOfStuff = doc.allElements.select("div.col-6")
+                val list = arrayListOf<ShowInfo>()
+                for (i in listOfStuff) {
+                    val url = i.select("a.thumbnail").attr("abs:href")
+                    list.add(
+                        ShowInfo(
+                            i.select("span.mov_title").text(),
+                            url.substring(0, url.indexOf("season", ignoreCase = true))
+                        )
                     )
-                )
+                }
+                list
             }
-            list
-        } else {
-            var listOfStuff = doc.allElements.select("div.left_col").select("table#updates")
-                .select("a[href^=http]")
-            if (listOfStuff.size == 0) {
-                listOfStuff = doc.allElements.select("div.s_left_col").select("table#updates")
+            else -> {
+                var listOfStuff = doc.allElements.select("div.left_col").select("table#updates")
                     .select("a[href^=http]")
+                if (listOfStuff.size == 0) {
+                    listOfStuff = doc.allElements.select("div.s_left_col").select("table#updates")
+                        .select("a[href^=http]")
+                }
+                val listOfShows = arrayListOf<ShowInfo>()
+                for (element in listOfStuff) {
+                    val showInfo =
+                        ShowInfo(element.text(), element.attr("abs:href"))
+                    if (!element.text().contains("Episode"))
+                        listOfShows.add(showInfo)
+                }
+                listOfShows
             }
-            val listOfShows = arrayListOf<ShowInfo>()
-            for (element in listOfStuff) {
-                val showInfo =
-                    ShowInfo(element.text(), element.attr("abs:href"))
-                if (!element.text().contains("Episode"))
-                    listOfShows.add(showInfo)
-            }
-            listOfShows
         }
     }
 
     private fun gogoAnimeRecent(): ArrayList<ShowInfo> {
-        val listOfStuff =
-            doc.allElements.select("div.dl-item")
+        val listOfStuff = doc.allElements.select("div.dl-item")
         val listOfShows = arrayListOf<ShowInfo>()
         for (element in listOfStuff) {
             val tempUrl = element.select("div.name").select("a[href^=http]").attr("abs:href")
@@ -236,6 +239,8 @@ class ShowApi(private val source: Source) {
  * If you want to get the Show with all the information now rather than passing it into [EpisodeApi] yourself
  */
 fun List<ShowInfo>.getEpisodeApi(index: Int): EpisodeApi = EpisodeApi(this[index])
+
+fun List<ShowInfo>.randomShow(): EpisodeApi = EpisodeApi(random())
 
 /**
  * Actual Show information
@@ -673,7 +678,7 @@ class EpisodeInfo(name: String, url: String) : ShowInfo(name, url) {
     }
 }
 
-class VideoLinkApi(val url: String) {
+class VideoLinkApi(private val url: String) {
     fun getVideoLink(): String {
         if (url.contains("putlocker")) {
             val firstHtml = getHtml(url)
