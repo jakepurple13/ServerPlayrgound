@@ -74,19 +74,14 @@ class ChatServer {
 
         // Only when joining the first socket for a member notifies the rest of the users.
         if (list.size == 1) {
-            //broadcast("server", "Member joined: $name.")
             broadcastUserUpdate()
-            //val text = "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} Connected"
             val sendMessage = SendMessage(ChatUser("Server"), "Connected as ${name.name}", MessageType.SERVER)
             members[member]?.send(Frame.Text(sendMessage.toJson()))
-
         }
 
         // Sends the user the latest messages from this server to let the member have a bit context.
         val messages = synchronized(lastMessages) { lastMessages.toList() }
         for (message in messages) {
-            //val sendMessage = SendMessage(ChatUser("Server"), message, MessageType.SERVER).toJson()
-            //socket.send(Frame.Text(sendMessage))
             socket.send(Frame.Text(message.toJson()))
         }
     }
@@ -96,22 +91,21 @@ class ChatServer {
      */
     suspend fun memberRenamed(member: String, to: String) {
         // Re-sets the member name.
-        //val oldName = memberNames.put(member, to) ?: member
         memberNames[member]?.name = to
         // Notifies everyone in the server about this change.
-        //broadcast("server", "Member renamed from $member to $to")
         broadcastUserUpdate()
     }
 
     /**
      * Handles a [member] idenitified by its session id renaming [to] a specific name.
      */
-    fun memberImageChange(member: String, newImage: String) {
+    suspend fun memberImageChange(member: String, newImage: String) {
         // Re-sets the member name.
         //val oldName = memberNames.put(member, to) ?: member
         memberNames[member]?.image = newImage
         // Notifies everyone in the server about this change.
         //broadcast("server", "Member renamed from $member to $to")
+        broadcastUserUpdate()
     }
 
     /**
@@ -135,20 +129,9 @@ class ChatServer {
      * Handles the 'who' command by sending the member a list of all all members names in the server.
      */
     suspend fun who(sender: String) {
-        /*val text =
-            "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} ${memberNames.values.joinToString(
-                prefix = "[server::who] "
-            ) { it.name }}"*/
         val text = memberNames.values.joinToString(prefix = "[server::who] ") { it.name }
         val sendMessage = SendMessage(ChatUser("Server"), text, MessageType.SERVER)
         members[sender]?.send(Frame.Text(sendMessage.toJson()))
-        //members[sender]?.send(Frame.Text(memberNames.values.joinToString(prefix = "[server::who] ")))
-        /*broadcast(
-            sender,
-            memberNames.values.joinToString(prefix = "[server::who] ") { it.name },
-            MessageType.SERVER,
-            sender
-        )*/
     }
 
     /**
@@ -184,9 +167,6 @@ class ChatServer {
      * Both [recipient] and [sender] are identified by its session-id.
      */
     suspend fun sendTo(recipient: String, sender: String, message: String) {
-        //val text = "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} $message"
-        prettyLog(members.keys.joinToString(", "))
-        prettyLog(memberNames.keys.joinToString(", "))
         val sendToUser = getMemberByUsername(recipient)
         if (sendToUser == null) {
             val sendMessage = SendMessage(ChatUser("Server"), "User not found", MessageType.SERVER)
@@ -196,8 +176,6 @@ class ChatServer {
             val sendMessage = SendMessage(user, "[${user.name} => $recipient] $message", MessageType.MESSAGE, data = "pm")
             members[sendToUser]?.send(Frame.Text(sendMessage.toJson()))
             members[sender]?.send(Frame.Text(sendMessage.toJson()))
-            //members[recipient]?.send(Frame.Text("[$sender] $message"))
-            //broadcast(sender, message, MessageType.MESSAGE, recipient)
         }
         prettyLog("$recipient\n$sendToUser\n$message")
     }
@@ -231,19 +209,10 @@ class ChatServer {
     suspend fun message(sender: String, message: String) {
         // Pre-format the message to be send, to prevent doing it for all the users or connected sockets.
         val name = memberNames[sender]?.name ?: sender
-        val formatted = "[$name] $message"
+        val formatted = "[$name] ${message.replace("\n", "<br />")}"
 
         // Sends this pre-formatted message to all the members in the server.
         broadcast(sender, formatted, MessageType.MESSAGE)
-
-        // Appends the message to the list of [lastMessages] and caps that collection to 100 items to prevent
-        // growing too much.
-        /*synchronized(lastMessages) {
-            lastMessages.add(formatted)
-            if (lastMessages.size > 100) {
-                lastMessages.removeFirst()
-            }
-        }*/
     }
 
     /**
@@ -252,13 +221,10 @@ class ChatServer {
     suspend fun actionMessage(sender: String, message: String) {
         // Pre-format the message to be send, to prevent doing it for all the users or connected sockets.
         val name = memberNames[sender]?.name ?: sender
-        val formatted = "<i>$name$message</i>"
+        val formatted = "<i>$name${message.replace("\n", "<br />")}</i>"
 
         // Sends this pre-formatted message to all the members in the server.
         broadcast(sender, formatted, MessageType.MESSAGE)
-
-        // Appends the message to the list of [lastMessages] and caps that collection to 100 items to prevent
-        // growing too much.
     }
 
     enum class MessageType {

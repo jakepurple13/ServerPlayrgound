@@ -213,6 +213,10 @@ function write(message) {
 
         const line = messageSetUp(div, obj);
 
+        if(!document.hasFocus()) {
+            notify(obj.user.name, obj.message, obj.user.image);
+        }
+
         if (obj.type === MESSAGE) {
             if (obj.data === "pm") {
                 div.className += " pm-dark";
@@ -234,6 +238,18 @@ function write(message) {
         // We scroll the container to where this text is so the use can see it on long conversations if he/she has scrolled up.
         messagesDiv.scrollTop = line.offsetTop;
     }
+}
+
+function notify(user, message, image) {
+    Push.create(user, {
+        body: message.substring(0, 30),
+        icon: image,
+        timeout: 4000,
+        onClick: function () {
+            window.focus();
+            this.close();
+        }
+    });
 }
 
 /**
@@ -307,7 +323,7 @@ function onPreviewMessage() {
     if(document.getElementById("commandInput").value.trim()) {
         if (!previewMessage) {
             let preview = {
-                text: document.getElementById("commandInput").value.trim()
+                text: document.getElementById("commandInput").value.replace(/\n/g, "<br />")
             };
             actionSend("Preview", preview);
             $('.collapse').collapse('show');
@@ -331,6 +347,26 @@ function actionSend(type, data) {
         };
         socket.send(JSON.stringify(d));
     }
+    if(previewMessage) {
+        document.getElementById("preview_message").innerHTML = document.getElementById("commandInput").value.replace(/\n/g, "<br />");
+    }
+}
+
+function getCaret(el) {
+    if (el.selectionStart) {
+        return el.selectionStart;
+    } else if (document.selection) {
+        el.focus();
+        let r = document.selection.createRange();
+        if (r == null) {
+            return 0;
+        }
+        let re = el.createTextRange(), rc = re.duplicate();
+        re.moveToBookmark(r.getBookmark());
+        rc.setEndPoint('EndToStart', re);
+        return rc.text.length;
+    }
+    return 0;
 }
 
 /**
@@ -358,7 +394,14 @@ function start() {
     };*/
     document.getElementById("commandInput").onkeyup= function (e) {
         if (e.keyCode === 13) {
-            onSend();
+            let content = this.value;
+            let caret = getCaret(this);
+            if(event.shiftKey){
+                this.value = content.substring(0, caret - 1) + "\n" + content.substring(caret, content.length);
+
+            } else {
+                onSend();
+            }
         }
         onSendTyping();
     };
