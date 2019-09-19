@@ -5,6 +5,8 @@ let previewMessage = false;
 
 let retryAttempts = 0;
 
+let tribute;
+
 /**
  * This function is in charge of connecting the client.
  */
@@ -30,12 +32,23 @@ function connect() {
         //write(connected);
         disconnectMessage = false;
         retryAttempts = 0;
+
+        /*let jsonList = $.getJSON({
+            url: '/api/web/all.json',
+            success: function(json) {
+                return json;
+            }
+        });*/
+
+        setUpAutocomplete();
+
     };
 
     // If the connection was closed gracefully (either normally or with a reason from the server),
     // we have this handler to notify to the user via the messages container.
     // Also we will retry a connection after 5 seconds.
     socket.onclose = function (evt) {
+        tribute.detach(document.getElementById('commandInput'));
         // Try to gather an explanation about why this was closed.
         let explanation = "";
         if (evt.reason && evt.reason.length > 0) {
@@ -65,6 +78,56 @@ function connect() {
         console.log(event.data);
         received(event.data.toString());
     };
+}
+
+function remoteSearch(text, cb) {
+    let URL = '/api/web/all.json';
+    let xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+                let data = JSON.parse(xhr.responseText);
+                cb(data);
+            } else if (xhr.status === 403) {
+                cb([]);
+            }
+        }
+    };
+    xhr.open("GET", URL + '?q=' + text, true);
+    xhr.send();
+}
+
+function setUpAutocomplete() {
+    tribute = new Tribute({
+        // symbol that starts the lookup
+        trigger: '@',
+        // class added in the flyout menu for active item
+        selectClass: 'highlight',
+        // function called on select that returns the content to insert
+        selectTemplate: function (item) {
+            return item.original.name;
+        },
+        // template for displaying item in menu
+        menuItemTemplate: function (item) {
+            return item.original.name;
+        },
+        // specify an alternative parent container for the menu
+        menuContainer: document.body,
+        // column to search against in the object (accepts function or string)
+        lookup: 'name',
+        // column that contains the content to insert by default
+        fillAttr: 'name',
+        // REQUIRED: array of objects to match
+        values: function (text, cb) {
+            remoteSearch(text, users => cb(users));
+        },
+        // specify whether the menu should be positioned.  Set to false and use in conjuction with menuContainer to create an inline menu
+        // (defaults to true)
+        positionMenu: false,
+        // turn tribute into an autocomplete
+        //autocompleteMode: true,
+    });
+    tribute.attach(document.getElementById('commandInput'));
 }
 
 /**
@@ -392,13 +455,12 @@ function start() {
             //onSendTyping();
         }
     };*/
-    document.getElementById("commandInput").onkeyup= function (e) {
+    document.getElementById("commandInput").onkeyup = function (e) {
         if (e.keyCode === 13) {
             let content = this.value;
             let caret = getCaret(this);
             if(event.shiftKey){
                 this.value = content.substring(0, caret - 1) + "\n" + content.substring(caret, content.length);
-
             } else {
                 onSend();
             }

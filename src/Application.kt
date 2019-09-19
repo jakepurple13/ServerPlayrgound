@@ -323,6 +323,13 @@ fun Application.module() {
                     }
                     call.respond(list)
                 }
+                get("/nameAll.json") {
+                    var list = listOf<String>()
+                    transaction(db) {
+                        list = Shows.selectAll().map { it[Shows.name] }.sortedBy { it }
+                    }
+                    call.respond(list)
+                }
                 get("/r{type}.json") {
                     when (call.parameters["type"]!!) {
                         "c" -> Source.RECENT_CARTOON

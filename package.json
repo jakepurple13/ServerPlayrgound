@@ -1,0 +1,8 @@
+{
+  "name": "newservtest",
+  "version": "1.0.0",
+  "dependencies": {},
+  "devDependencies": {
+    "tributejs": "^3.7.3"
+  }
+}
