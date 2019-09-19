@@ -6,6 +6,7 @@ let previewMessage = false;
 let retryAttempts = 0;
 
 let tribute;
+let tributeEntered = false;
 
 /**
  * This function is in charge of connecting the client.
@@ -457,16 +458,25 @@ function start() {
     };*/
     document.getElementById("commandInput").onkeyup = function (e) {
         if (e.keyCode === 13) {
-            let content = this.value;
-            let caret = getCaret(this);
-            if(event.shiftKey){
-                this.value = content.substring(0, caret - 1) + "\n" + content.substring(caret, content.length);
-            } else {
-                onSend();
+            if(!tributeEntered) {
+                let content = this.value;
+                let caret = getCaret(this);
+                if (event.shiftKey) {
+                    this.value = content.substring(0, caret - 1) + "\n" + content.substring(caret, content.length);
+                } else {
+                    onSend();
+                }
             }
+            tributeEntered = false;
         }
         onSendTyping();
     };
+
+    document.getElementById('commandInput').addEventListener('tribute-replaced', function (e) {
+        console.log('Original event that triggered text replacement:', e.detail.event);
+        console.log('Matched item:', e.detail.item);
+        tributeEntered = true;
+    });
 
 }
 
