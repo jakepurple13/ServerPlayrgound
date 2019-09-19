@@ -66,7 +66,7 @@ function connect() {
         }
         //write("Disconnected");
         // Try to reconnect after 5 seconds.
-        if(retryAttempts<=5) {
+        if (retryAttempts <= 5) {
             retryAttempts++;
             setTimeout(connect, 5000);
         } else {
@@ -255,11 +255,11 @@ function write(message) {
     line.className = "message";
     line.innerHTML = message;*/
     const obj = JSON.parse(message);
-    if(obj.type===PREVIEW) {
+    if (obj.type === PREVIEW) {
         document.getElementById("preview_message").innerHTML = obj.message;
-    } else if(obj.type===DOWNLOADING) {
+    } else if (obj.type === DOWNLOADING) {
         console.log(obj.data);
-    } else if(obj.type === TYPING_INDICATOR) {
+    } else if (obj.type === TYPING_INDICATOR) {
         const typingTag = document.getElementById("typing_indicate");
         typingTag.innerText = obj.message;
     } else if (obj.type === INFO) {
@@ -277,7 +277,7 @@ function write(message) {
 
         const line = messageSetUp(div, obj);
 
-        if(!document.hasFocus()) {
+        if (!document.hasFocus()) {
             notify(obj.user.name, obj.message, obj.user.image);
         }
 
@@ -341,7 +341,7 @@ function onSendTyping() {
         const text = input.value.trim();
         // Validates that there is a text and that the socket exists
         let typing = {
-            isTyping: text.length!==0 && socket.readyState===1 && !text.includes("/pm")
+            isTyping: text.length !== 0 && socket.readyState === 1 && !text.includes("/pm")
         };
         actionSend("Typing", typing);
     }
@@ -384,7 +384,7 @@ function onDownloadMessages() {
 }
 
 function onPreviewMessage() {
-    if(document.getElementById("commandInput").value.trim()) {
+    if (document.getElementById("commandInput").value.trim()) {
         if (!previewMessage) {
             let preview = {
                 text: document.getElementById("commandInput").value.replace(/\n/g, "<br />")
@@ -411,7 +411,7 @@ function actionSend(type, data) {
         };
         socket.send(JSON.stringify(d));
     }
-    if(previewMessage) {
+    if (previewMessage) {
         document.getElementById("preview_message").innerHTML = document.getElementById("commandInput").value.replace(/\n/g, "<br />");
     }
 }
@@ -433,6 +433,39 @@ function getCaret(el) {
     return 0;
 }
 
+function setCaretPosition(elemId, caretPos) {
+    let elem = document.getElementById(elemId);
+
+    if (elem != null) {
+        if (elem.createTextRange) {
+            let range = elem.createTextRange();
+            range.move('character', caretPos);
+            range.select();
+        } else {
+            if (elem.selectionStart) {
+                elem.focus();
+                elem.setSelectionRange(caretPos, caretPos);
+            } else
+                elem.focus();
+        }
+    }
+}
+
+String.prototype.splice = function (idx, rem, str) {
+    return this.slice(0, idx) + str + this.slice(idx + Math.abs(rem));
+};
+
+
+function insertText(textToInsert) {
+    let command = document.getElementById("commandInput");
+    command.value = command.value.toString().splice(getCaret(command), 0, textToInsert);
+    setCaretPosition("commandInput", command.value.toString().indexOf(textToInsert) + 15);
+}
+
+function onColor() {
+    insertText("<font color=\"\"></font>");
+}
+
 /**
  * The initial code to be executed once the page has been loaded and is ready.
  */
@@ -448,6 +481,12 @@ function start() {
     document.getElementById("download_messages").onclick = onDownloadMessages;
     //to preview your message
     document.getElementById("preview_text").onclick = onPreviewMessage;
+    //add some color to the text
+    document.getElementById("color_text").onclick = onColor;
+    // Prevent capturing focus by the button.
+    $('#color_text').on('mousedown', function (event) {
+        event.preventDefault();
+    });
     // If we pressed the 'enter' key being inside the 'commandInput', send the message to improve accessibility and making it nicer.
     /*document.getElementById("commandInput").onkeydown = function (e) {
         if (e.keyCode === 13) {
@@ -458,7 +497,7 @@ function start() {
     };*/
     document.getElementById("commandInput").onkeyup = function (e) {
         if (e.keyCode === 13) {
-            if(!tributeEntered) {
+            if (!tributeEntered) {
                 let content = this.value;
                 let caret = getCaret(this);
                 if (event.shiftKey) {
