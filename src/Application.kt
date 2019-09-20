@@ -7,10 +7,7 @@ import com.auth0.jwt.algorithms.Algorithm
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.google.gson.Gson
 import freemarker.cache.ClassTemplateLoader
-import io.ktor.application.Application
-import io.ktor.application.ApplicationCallPipeline
-import io.ktor.application.call
-import io.ktor.application.install
+import io.ktor.application.*
 import io.ktor.auth.Authentication
 import io.ktor.auth.UserIdPrincipal
 import io.ktor.auth.authenticate
@@ -34,6 +31,8 @@ import io.ktor.jackson.jackson
 import io.ktor.request.receive
 import io.ktor.response.respond
 import io.ktor.routing.*
+import io.ktor.server.engine.embeddedServer
+import io.ktor.server.netty.Netty
 import io.ktor.sessions.*
 import io.ktor.util.generateNonce
 import io.ktor.websocket.WebSockets
@@ -43,7 +42,6 @@ import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
 import kotlinx.html.*
 import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.like
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.selectAll
@@ -54,12 +52,26 @@ import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.system.measureTimeMillis
 
-fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
+fun main(args: Array<String>): Unit {
+    embeddedServer(Netty, port = 8080, module = Application::module).start(wait = true)
+    //io.ktor.server.netty.EngineMain.main(args)
+}
 
 fun Application.module() {
     System.setProperty("https.protocols", "TLSv1.2,TLSv1.1,SSLv3");
     val db = DbSettings.db
 
+    val simpleJwt = SimpleJWT("my-super-secret-for-jwt")
+
+    database(db)
+
+    installing(simpleJwt)
+
+    routing(db, simpleJwt)
+
+}
+
+private fun Application.database(db: Database) {
     GlobalScope.launch {
         //getAllShows(db)
         //getAllShowsAndEpisodes(db)
@@ -88,8 +100,9 @@ fun Application.module() {
             //updateShows(db)
         }
     }*/
+}
 
-    val simpleJwt = SimpleJWT("my-super-secret-for-jwt")
+private fun Application.installing(simpleJwt: SimpleJWT) {
     install(CORS) {
         method(HttpMethod.Options)
         method(HttpMethod.Get)
@@ -136,6 +149,9 @@ fun Application.module() {
     install(FreeMarker) {
         templateLoader = ClassTemplateLoader(this::class.java.classLoader, "templates")
     }
+}
+
+private fun Application.routing(db: Database, simpleJwt: SimpleJWT) {
     routing {
         post("/login-register") {
             val post = call.receive<LoginRegister>()
@@ -157,53 +173,8 @@ fun Application.module() {
             }
         }
 
-        route("/chat") {
-            val clients = Collections.synchronizedSet(LinkedHashSet<ChatClient>())
-
-            webSocket("/ws") {
-                // this: WebSocketSession ->
-
-                // First of all we get the session.
-                val session = call.sessions.get<ChatSession>()
-
-                // We check that we actually have a session. We should always have one,
-                // since we have defined an interceptor before to set one.
-                if (session == null) {
-                    close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "No session"))
-                    return@webSocket
-                }
-
-                // We notify that a member joined by calling the server handler [memberJoin]
-                // This allows to associate the session id to a specific WebSocket connection.
-                server.memberJoin(session.id, this)
-
-                try {
-                    // We starts receiving messages (frames).
-                    // Since this is a coroutine. This coroutine is suspended until receiving frames.
-                    // Once the connection is closed, this consumeEach will finish and the code will continue.
-                    incoming.consumeEach { frame ->
-                        // Frames can be [Text], [Binary], [Ping], [Pong], [Close].
-                        // We are only interested in textual messages, so we filter it.
-                        if (frame is Frame.Text) {
-                            // Now it is time to process the text sent from the user.
-                            // At this point we have context about this connection, the session, the text and the server.
-                            // So we have everything we need.
-                            receivedMessage(session.id, frame.readText())
-                        }
-                    }
-                } finally {
-                    // Either if there was an error, of it the connection was closed gracefully.
-                    // We notify the server that the member left.
-                    server.memberLeft(session.id, this)
-                }
-            }
-            static {
-                // This marks index.html from the 'web' folder in resources as the default file to serve.
-                defaultResource("chat.html", "web")
-                // This serves files from the 'web' folder in the application resources.
-                resources("web")
-            }
-        }
+        chatRoute()
+        api(db)
 
         route("/nsi/{name}") {
             get {
@@ -223,12 +194,8 @@ fun Application.module() {
                         val e = Episodes.select {
                             Episodes.url like "%$source%" and (Episodes.url like "%${name.substring(1)}%")
                         }.toList()
-                        /*val e = Episode.find {
-                            Episodes.url like "%$source%" and (Episodes.url like "%${name.substring(1)}%")
-                        }.toList()*/
 
                         if (e.isNotEmpty()) {
-                            //val list = EpisodeList.find { EpisodeLists.episode eq e[0].id }.toList()
                             val list = EpisodeLists.select { EpisodeLists.episode eq e[0][Episodes.id] }
                                 .map { EpListInfo(it[EpisodeLists.name], it[EpisodeLists.url]) }
                             episode = EpisodeApiInfo(
@@ -256,172 +223,6 @@ fun Application.module() {
             }
         }
 
-        route("/api") {
-            get("/about") {
-                call.respondHtml {
-                    body {
-                        dl {
-                            dt {
-                                +"To get video url"
-                            }
-                            dd {
-                                +"/api/video/{url}.json"
-                            }
-                            dd {
-                                +"make sure all of the \"/\" are changed to \"_\" when submitting"
-                            }
-                            br { }
-                            dt {
-                                +"To get all shows in database"
-                            }
-                            dd {
-                                +"/api/user/all.json"
-                            }
-                            br { }
-                            dt {
-                                +"To get recent shows"
-                            }
-                            dd {
-                                +"/api/user/r{type}.json"
-                            }
-                            dd {
-                                +"l for TV Shows"
-                            }
-                            dd {
-                                +"c for Cartoons"
-                            }
-                            dd {
-                                +"a for Anime"
-                            }
-                            dd {
-                                +"all for All"
-                            }
-                            br { }
-                            dt {
-                                +"To get Show Information"
-                            }
-                            dd {
-                                +"/nsi/{name}.json"
-                            }
-                            dd {
-                                +"name consists of the first letter of the kind of source and the name in all lowercase and hyphens instead of spaces"
-                            }
-                        }
-                    }
-                }
-            }
-            get("/video/{url}.json") {
-                val url = call.parameters["url"]!!
-                val vla = VideoLinkApi(url.replace("_", "/")).getVideoLink()
-                call.respond(mapOf("VideoLink" to vla))
-            }
-            route("/web") {
-                get("/all.json") {
-                    var list = listOf<ShowInfo>()
-                    transaction(db) {
-                        list = Shows.selectAll().map { ShowInfo(it[Shows.name], it[Shows.url]) }.sortedBy { it.name }
-                    }
-                    call.respond(list)
-                }
-                get("/nameAll.json") {
-                    var list = listOf<String>()
-                    transaction(db) {
-                        list = Shows.selectAll().map { it[Shows.name] }.sortedBy { it }
-                    }
-                    call.respond(list)
-                }
-                get("/r{type}.json") {
-                    when (call.parameters["type"]!!) {
-                        "c" -> Source.RECENT_CARTOON
-                        "a" -> Source.RECENT_ANIME
-                        "l" -> Source.RECENT_LIVE_ACTION
-                        else -> null
-                    }?.let {
-                        val s = ShowApi(it).showInfoList
-                        call.respond(s)
-                    }
-                }
-                this@route.getShowType(db)
-                /*get("/t{type}.json") {
-                    val type = call.parameters["type"]!!
-                    var list = listOf<ShowInfo>()
-                    transaction(db) {
-                        list = Shows.select { Shows.url like "%$type%" }.map { ShowInfo(it[Shows.name], it[Shows.url]) }
-                            .sortedBy { it.name }
-                        //list = Show.find { Shows.url like "%$type%" }.sortedBy { it.name }.map { ShowInfo(it.name, it.url) }
-                    }
-                    call.respond(list)
-                }*/
-            }
-            route("/user") {
-                get("/all.json") {
-                    var list = listOf<ShowInfo>()
-                    transaction(db) {
-                        list = Shows.selectAll().map { ShowInfo(it[Shows.name], it[Shows.url]) }.sortedBy { it.name }
-                        //list = Show.all().sortedBy { it.name }.map { ShowInfo(it.name, it.url) }
-                    }
-                    call.respond(mapOf("Shows" to list))
-                }
-                get("/nsi/{name}.json") {
-                    val name = call.parameters["name"]!!
-
-                    val source = when (name[0]) {
-                        'p' -> "putlocker"
-                        'g' -> "gogoanime"
-                        'a' -> "animetoon"
-                        else -> ""
-                    }
-
-                    var episode = EpisodeApiInfo()
-
-                    transaction(db) {
-                        val e = Episodes.select {
-                            Episodes.url like "%$source%" and (Episodes.url like "%${name.substring(1)}%")
-                        }.toList()
-                        /*val e = Episode.find {
-                            Episodes.url like "%$source%" and (Episodes.url like "%${name.substring(
-                                1
-                            )}%")
-                        }.toList()*/
-                        val i = e[0]
-                        //val l = EpisodeList.find { EpisodeLists.episode eq i.id }.toList()
-                        val l = EpisodeLists.select { EpisodeLists.episode eq i[Episodes.id] }
-                            .map { EpListInfo(it[EpisodeLists.name], it[EpisodeLists.url]) }
-                        episode = EpisodeApiInfo(
-                            i[Episodes.name],
-                            i[Episodes.image],
-                            i[Episodes.url],
-                            i[Episodes.description],
-                            l
-                        )
-                    }
-                    call.respond(mapOf("EpisodeInfo" to episode))
-                }
-                get("/r{type}.json") {
-                    when (call.parameters["type"]!!) {
-                        "c" -> Source.RECENT_CARTOON
-                        "a" -> Source.RECENT_ANIME
-                        "l" -> Source.RECENT_LIVE_ACTION
-                        "all" -> Source.DUBBED
-                        else -> null
-                    }?.let {
-                        val s = if (it == Source.DUBBED) ShowApi.getAllRecent() else ShowApi(it).showInfoList
-                        call.respond(mapOf("Shows" to synchronized(s) { s.toList() }))
-                    }
-                }
-                this@route.getShowType(db)
-                /*get("/t{type}.json") {
-                    val type = call.parameters["type"]!!
-                    var list = listOf<ShowInfo>()
-                    transaction(db) {
-                        list = Shows.select { Shows.url like "%$type%" }.map { ShowInfo(it[Shows.name], it[Shows.url]) }
-                            .sortedBy { it.name }
-                        //list = Show.find { Shows.url like "%$type%" }.sortedBy { it.name }.map { ShowInfo(it.name, it.url) }
-                    }
-                    call.respond(list)
-                }*/
-            }
-        }
         route("/updateShows") {
             get {
                 val starting = "Running at ${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())}"
@@ -439,6 +240,7 @@ fun Application.module() {
                 }
             }
         }
+
         route("/") {
             get {
                 prettyLog(call.request.origin.remoteHost)
@@ -455,30 +257,225 @@ fun Application.module() {
                         mapOf("data" to list)
                     )
                 )
-                /*call.respond(
-                    FreeMarkerContent(
-                        "table.ftl",
-                        mapOf("data" to list)
-                    )
-                )*/
             }
         }
         static("/static") {
             resources("static")
         }
     }
-
 }
 
-fun Route.getShowType(db: Database) = get("/t{type}.json") {
-    val type = call.parameters["type"]!!
-    var list = listOf<ShowInfo>()
-    transaction(db) {
-        list = Shows.select { Shows.url like "%$type%" }.map { ShowInfo(it[Shows.name], it[Shows.url]) }
-            .sortedBy { it.name }
-        //list = Show.find { Shows.url like "%$type%" }.sortedBy { it.name }.map { ShowInfo(it.name, it.url) }
+private fun Route.chatRoute() {
+    route("/chat") {
+        val clients = Collections.synchronizedSet(LinkedHashSet<ChatClient>())
+
+        webSocket("/ws") {
+            // this: WebSocketSession ->
+
+            // First of all we get the session.
+            val session = call.sessions.get<ChatSession>()
+
+            // We check that we actually have a session. We should always have one,
+            // since we have defined an interceptor before to set one.
+            if (session == null) {
+                close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "No session"))
+                return@webSocket
+            }
+
+            // We notify that a member joined by calling the server handler [memberJoin]
+            // This allows to associate the session id to a specific WebSocket connection.
+            server.memberJoin(session.id, this)
+
+            try {
+                // We starts receiving messages (frames).
+                // Since this is a coroutine. This coroutine is suspended until receiving frames.
+                // Once the connection is closed, this consumeEach will finish and the code will continue.
+                incoming.consumeEach { frame ->
+                    // Frames can be [Text], [Binary], [Ping], [Pong], [Close].
+                    // We are only interested in textual messages, so we filter it.
+                    if (frame is Frame.Text) {
+                        // Now it is time to process the text sent from the user.
+                        // At this point we have context about this connection, the session, the text and the server.
+                        // So we have everything we need.
+                        receivedMessage(session.id, frame.readText())
+                    }
+                }
+            } finally {
+                // Either if there was an error, of it the connection was closed gracefully.
+                // We notify the server that the member left.
+                server.memberLeft(session.id, this)
+            }
+        }
+        static {
+            // This marks index.html from the 'web' folder in resources as the default file to serve.
+            defaultResource("chat.html", "web")
+            // This serves files from the 'web' folder in the application resources.
+            resources("web")
+        }
     }
-    call.respond(list)
+}
+
+fun Route.api(db: Database) {
+    route("/api") {
+        get("/about") {
+            call.respondHtml {
+                body {
+                    dl {
+                        dt {
+                            +"To get video url"
+                        }
+                        dd {
+                            +"/api/video/{url}.json"
+                        }
+                        dd {
+                            +"make sure all of the \"/\" are changed to \"_\" when submitting"
+                        }
+                        br { }
+                        dt {
+                            +"To get all shows in database"
+                        }
+                        dd {
+                            +"/api/user/all.json"
+                        }
+                        br { }
+                        dt {
+                            +"To get recent shows"
+                        }
+                        dd {
+                            +"/api/user/r{type}.json"
+                        }
+                        dd {
+                            +"l for TV Shows"
+                        }
+                        dd {
+                            +"c for Cartoons"
+                        }
+                        dd {
+                            +"a for Anime"
+                        }
+                        dd {
+                            +"all for All"
+                        }
+                        br { }
+                        dt {
+                            +"To get Show Information"
+                        }
+                        dd {
+                            +"/nsi/{name}.json"
+                        }
+                        dd {
+                            +"name consists of the first letter of the kind of source and the name in all lowercase and hyphens instead of spaces"
+                        }
+                    }
+                }
+            }
+        }
+        get("/video/{url}.json") {
+            val url = call.parameters["url"]!!
+            val vla = VideoLinkApi(url.replace("_", "/")).getVideoLink()
+            call.respond(mapOf("VideoLink" to vla))
+        }
+        webApi(db)
+        userApi(db)
+    }
+}
+
+fun Route.webApi(db: Database) {
+    route("/web") {
+        get("/all.json") {
+            var list = listOf<ShowInfo>()
+            transaction(db) {
+                list = Shows.selectAll().map { ShowInfo(it[Shows.name], it[Shows.url]) }.sortedBy { it.name }
+            }
+            call.respond(list)
+        }
+        get("/nameAll.json") {
+            var list = listOf<String>()
+            transaction(db) {
+                list = Shows.selectAll().map { it[Shows.name] }.sortedBy { it }
+            }
+            call.respond(list)
+        }
+        get("/r{type}.json") {
+            when (call.parameters["type"]!!) {
+                "c" -> Source.RECENT_CARTOON
+                "a" -> Source.RECENT_ANIME
+                "l" -> Source.RECENT_LIVE_ACTION
+                else -> null
+            }?.let {
+                val s = ShowApi(it).showInfoList
+                call.respond(s)
+            }
+        }
+        getShowType(db)
+    }
+}
+
+fun Route.userApi(db: Database) {
+    route("/user") {
+        get("/all.json") {
+            var list = listOf<ShowInfo>()
+            transaction(db) {
+                list = Shows.selectAll().map { ShowInfo(it[Shows.name], it[Shows.url]) }.sortedBy { it.name }
+                //list = Show.all().sortedBy { it.name }.map { ShowInfo(it.name, it.url) }
+            }
+            call.respond(mapOf("Shows" to list))
+        }
+        get("/nsi/{name}.json") {
+            val name = call.parameters["name"]!!
+
+            val source = when (name[0]) {
+                'p' -> "putlocker"
+                'g' -> "gogoanime"
+                'a' -> "animetoon"
+                else -> ""
+            }
+
+            var episode = EpisodeApiInfo()
+
+            transaction(db) {
+                val e = Episodes.select {
+                    Episodes.url like "%$source%" and (Episodes.url like "%${name.substring(1)}%")
+                }.toList()
+                val i = e[0]
+                val l = EpisodeLists.select { EpisodeLists.episode eq i[Episodes.id] }
+                    .map { EpListInfo(it[EpisodeLists.name], it[EpisodeLists.url]) }
+                episode = EpisodeApiInfo(
+                    i[Episodes.name],
+                    i[Episodes.image],
+                    i[Episodes.url],
+                    i[Episodes.description],
+                    l
+                )
+            }
+            call.respond(mapOf("EpisodeInfo" to episode))
+        }
+        get("/r{type}.json") {
+            when (call.parameters["type"]!!) {
+                "c" -> Source.RECENT_CARTOON
+                "a" -> Source.RECENT_ANIME
+                "l" -> Source.RECENT_LIVE_ACTION
+                "all" -> Source.DUBBED
+                else -> null
+            }?.let {
+                val s = if (it == Source.DUBBED) ShowApi.getAllRecent() else ShowApi(it).showInfoList
+                call.respond(mapOf("Shows" to synchronized(s) { s.toList() }))
+            }
+        }
+        getShowType(db)
+    }
+}
+
+fun Route.getShowType(db: Database) {
+    get("/t{type}.json") {
+        val type = call.parameters["type"]!!
+        var list = listOf<ShowInfo>()
+        transaction(db) {
+            list = Shows.select { Shows.url like "%$type%" }.map { ShowInfo(it[Shows.name], it[Shows.url]) }
+                .sortedBy { it.name }
+        }
+        call.respond(list)
+    }
 }
 
 data class PostSnippet(val snippet: PostSnippet.Text) {
@@ -550,7 +547,7 @@ private suspend fun receivedMessage(id: String, command: String) {
     try {
 
         val action = Gson().fromJson<Action>(command, Action::class.java)
-        when(action.type) {
+        when (action.type) {
             "Typing" -> {
                 val typing = Gson().fromJson<TypingIndicator>(action.json, TypingIndicator::class.java)
                 server.isTyping(id, typing)

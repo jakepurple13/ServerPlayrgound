@@ -23,7 +23,25 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js"
             integrity="sha256-1fEPhSsRKlFKGfK3eO710tEweHh1fwokU5wFGDHO+vg=" crossorigin="anonymous"></script>
 
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.17.1/themes/prism.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/components/prism-core.min.js" integrity="sha256-Y+Budm2wBEjYjbH0qcJRmLuRBFpXd0VKxl6XhdS4hgA=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.17.1/plugins/autoloader/prism-autoloader.min.js" integrity="sha256-ht8ay6ZTPZfuixYB99I5oRpCLsCq7Do2LjEYLwbe+X8=" crossorigin="anonymous"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.17.1/plugins/line-numbers/prism-line-numbers.css">
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.17.1/plugins/line-numbers/prism-line-numbers.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.17.1/plugins/toolbar/prism-toolbar.css">
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.17.1/plugins/toolbar/prism-toolbar.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.17.1/plugins/show-language/prism-show-language.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.17.1/plugins/normalize-whitespace/prism-normalize-whitespace.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.17.1/plugins/previewers/prism-previewers.css">
+    <script src="https://cdn.jsdelivr.net/npm/prismjs@1.17.1/plugins/previewers/prism-previewers.min.js"></script>
+
 </head>
+
 <body style="background-color: #1b1b1b;">
 <div class="header">
     <!--<h1>Night chat</h1>-->
@@ -60,19 +78,19 @@
             <label id="typing_indicate"></label>
             <div class="input-group mb-3">
                 <div class="btn-group" role="group" aria-label="Basic example">
-                    <button type="button" id="color_text" class="btn btn-primary">
-                        <i class="glyphicon glyphicon-remove"></i>Color
+                    <button title="Ctrl+C" type="button" id="color_text" class="btn btn-primary">
+                        Color
                     </button>
-                    <button type="button" id="italics_text" class="btn btn-primary">
+                    <button title="Ctrl+I" type="button" id="italics_text" class="btn btn-primary">
                         <i class="glyphicon glyphicon-remove">I</i>
                     </button>
-                    <button type="button" id="underline_text" class="btn btn-primary">
+                    <button title="Ctrl+U" type="button" id="underline_text" class="btn btn-primary">
                         <ins>U</ins>
                     </button>
-                    <button type="button" id="strikethrough_text" class="btn btn-primary">
+                    <button title="Ctrl+S" type="button" id="strikethrough_text" class="btn btn-primary">
                         <del>S</del>
                     </button>
-                    <button type="button" id="bold_text" class="btn btn-primary">
+                    <button title="Ctrl+Z" type="button" id="bold_text" class="btn btn-primary">
                         <b class="glyphicon glyphicon-remove">B</b>
                     </button>
                     <button type="button" id="img_text" class="btn btn-primary">

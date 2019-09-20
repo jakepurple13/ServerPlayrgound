@@ -5,6 +5,7 @@
     "@bbob/core": "^2.5.3",
     "@bbob/preset-html5": "^2.5.3",
     "bbcode-parser": "^1.0.10",
+    "highlight.js": "^9.15.10",
     "ya-bbcode": "^1.0.9"
   },
   "devDependencies": {

@@ -7,7 +7,31 @@ let retryAttempts = 0;
 let tribute;
 let tributeEntered = false;
 
-const core = BbobCore(BbobPresetHTML5());
+Prism.plugins.NormalizeWhitespace.setDefaults({
+    'remove-trailing': true,
+    'remove-indent': true,
+    'left-trim': true,
+    'right-trim': true,
+    /*'break-lines': 80,
+    'indent': 2,
+    'remove-initial-line-feed': false,
+    'tabs-to-spaces': 4,
+    'spaces-to-tabs': 4*/
+});
+
+const myPreset = BbobPresetHTML5.extend(tags => ({
+    ...tags,
+    code: (node, core) => ({
+        ...tags.code(node, core),
+        /*content: '<code class="language-' + node.attrs.lang + '">' + node.content.join('') + "</code>"*/
+        /*content: '<code class="lang-' + node.attrs.lang + '">' + node.content.join('') + "</code>"*/
+        /*content: '<code class="line-numbers lang-java">' + node.content.join('') + '</code>'*/
+        content: '<code class="line-numbers lang-' + node.attrs.lang + '">' + node.content.join('') + '</code>'
+        /*content: '<code class="' + node.attrs.lang + '">' + node.content.join('') + "</code>"*/
+        /*content: Prism.highlight(node.content.join(''), Prism.languages.javascript)*/
+    })
+}));
+const core = BbobCore(myPreset());
 
 /**
  * This function is in charge of connecting the client.
@@ -467,7 +491,7 @@ function onImg() {
 }
 
 function onCode() {
-    insertText("[code][/code]", 6);
+    insertText("[code lang=\"\"][/code]", 14);
 }
 
 function onURL() {
@@ -519,7 +543,6 @@ function start() {
     setTextButtonUp("url_text", onURL);
 
     document.getElementById("commandInput").onkeypress = function (e) {
-        console.log(e.code);
         if (e.code === 'Enter') {
             if (!tributeEntered) {
                 if (e.shiftKey) {
@@ -535,7 +558,7 @@ function start() {
                 case 'i':
                     onItalics();
                     break;
-                case 'b':
+                case 'z':
                     onBold();
                     break;
                 case 'c':
@@ -556,6 +579,7 @@ function start() {
 
     document.getElementById("commandInput").oninput = function () {
         previewText();
+        Prism.highlightAll();
     };
 
     document.getElementById('commandInput').addEventListener('tribute-replaced', function (e) {
