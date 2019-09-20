@@ -228,7 +228,7 @@ class ChatServer {
     }
 
     enum class MessageType {
-        MESSAGE, EPISODE, SERVER, INFO, TYPING_INDICATOR, DOWNLOADING, PREVIEW
+        MESSAGE, EPISODE, SERVER, INFO, TYPING_INDICATOR, DOWNLOADING
     }
 
     suspend fun downloadMessages(sender: String) {
@@ -249,11 +249,6 @@ class ChatServer {
                 }
             }
         val sendMessage = SendMessage(ChatUser("Server"), "", MessageType.DOWNLOADING, html)
-        members[sender]?.send(Frame.Text(sendMessage.toJson()))
-    }
-
-    suspend fun previewMessage(sender: String, message: PreviewText) {
-        val sendMessage = SendMessage(memberNames[sender]!!, message.text, MessageType.PREVIEW)
         members[sender]?.send(Frame.Text(sendMessage.toJson()))
     }
 

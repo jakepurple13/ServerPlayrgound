@@ -1,8 +1,15 @@
 {
   "name": "newservtest",
   "version": "1.0.0",
-  "dependencies": {},
+  "dependencies": {
+    "@bbob/core": "^2.5.3",
+    "@bbob/preset-html5": "^2.5.3",
+    "bbcode-parser": "^1.0.10",
+    "ya-bbcode": "^1.0.9"
+  },
   "devDependencies": {
+    "@bbob/html": "^2.5.3",
+    "js-bbcode-parser": "^3.0.2",
     "tributejs": "^3.7.3"
   }
 }

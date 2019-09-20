@@ -1,12 +1,13 @@
 // Global variable to hold the websocket.
 let socket = null;
 let disconnectMessage = false;
-let previewMessage = false;
 
 let retryAttempts = 0;
 
 let tribute;
 let tributeEntered = false;
+
+const core = BbobCore(BbobPresetHTML5());
 
 /**
  * This function is in charge of connecting the client.
@@ -188,7 +189,7 @@ function messageSetUp(div, obj) {
     textDiv.className = "text_layer inner";
     const line = document.createElement("p");
     line.className = "message";
-    line.innerHTML = obj.message;
+    line.innerHTML = parseBBCode(obj.message);
     textDiv.appendChild(line);
     div.appendChild(imgDiv);
     div.appendChild(textDiv);
@@ -240,7 +241,6 @@ const EPISODE = "EPISODE";
 const MESSAGE = "MESSAGE";
 const TYPING_INDICATOR = "TYPING_INDICATOR";
 const DOWNLOADING = "DOWNLOADING";
-const PREVIEW = "PREVIEW";
 
 /**
  * Writes a message in the HTML 'messages' container that the user can see.
@@ -255,9 +255,7 @@ function write(message) {
     line.className = "message";
     line.innerHTML = message;*/
     const obj = JSON.parse(message);
-    if (obj.type === PREVIEW) {
-        document.getElementById("preview_message").innerHTML = obj.message;
-    } else if (obj.type === DOWNLOADING) {
+    if (obj.type === DOWNLOADING) {
         console.log(obj.data);
     } else if (obj.type === TYPING_INDICATOR) {
         const typingTag = document.getElementById("typing_indicate");
@@ -330,6 +328,7 @@ function onSend() {
             socket.send(text);
             // Clears the input so the user can type a new command or text to say
             input.value = "";
+            document.getElementById("preview_message").innerHTML = "";
         }
     }
 }
@@ -384,23 +383,7 @@ function onDownloadMessages() {
 }
 
 function onPreviewMessage() {
-    if (document.getElementById("commandInput").value.trim()) {
-        if (!previewMessage) {
-            let preview = {
-                text: document.getElementById("commandInput").value.replace(/\n/g, "<br />")
-            };
-            actionSend("Preview", preview);
-            $('.collapse').collapse('show');
-        } else {
-            document.getElementById("preview_message").innerHTML = "";
-            $('.collapse').collapse('hide');
-        }
-        previewMessage = !previewMessage;
-    } else {
-        previewMessage = false;
-        document.getElementById("preview_message").innerHTML = "";
-        $('.collapse').collapse('hide');
-    }
+    $('.collapse').collapse('toggle');
 }
 
 function actionSend(type, data) {
@@ -410,9 +393,6 @@ function actionSend(type, data) {
             json: JSON.stringify(data)
         };
         socket.send(JSON.stringify(d));
-    }
-    if (previewMessage) {
-        document.getElementById("preview_message").innerHTML = document.getElementById("commandInput").value.replace(/\n/g, "<br />");
     }
 }
 
@@ -456,14 +436,60 @@ String.prototype.splice = function (idx, rem, str) {
 };
 
 
-function insertText(textToInsert) {
+function insertText(textToInsert, middle) {
     let command = document.getElementById("commandInput");
     command.value = command.value.toString().splice(getCaret(command), 0, textToInsert);
-    setCaretPosition("commandInput", command.value.toString().indexOf(textToInsert) + 15);
+    setCaretPosition("commandInput", command.value.toString().indexOf(textToInsert) + middle);
 }
 
 function onColor() {
-    insertText("<font color=\"\"></font>");
+    insertText("[style color=\"\"][/style]", 16);
+}
+
+function onItalics() {
+    insertText("[i][/i]", 3);
+}
+
+function onBold() {
+    insertText("[b][/b]", 3);
+}
+
+function onUnderline() {
+    insertText("[u][/u]", 3);
+}
+
+function onStrikethrough() {
+    insertText("[s][/s]", 3);
+}
+
+function onImg() {
+    insertText("[img][/img]", 5);
+}
+
+function onCode() {
+    insertText("[code][/code]", 6);
+}
+
+function onURL() {
+    insertText("[url=][/url]", 6);
+}
+
+function preventFocus(id) {
+    // Prevent capturing focus by the button.
+    $(id).on('mousedown', function (event) {
+        event.preventDefault();
+    });
+}
+
+function setTextButtonUp(id, method) {
+    document.getElementById(id).onclick = method;
+    preventFocus("#" + id);
+}
+
+function previewText() {
+    document.getElementById("preview_message").innerHTML = parseBBCode(document.getElementById("commandInput").value.replace(/\n/g, "<br />"));
+    let objDiv = document.getElementById("preview_message");
+    objDiv.scrollTop = objDiv.scrollHeight;
 }
 
 /**
@@ -481,34 +507,55 @@ function start() {
     document.getElementById("download_messages").onclick = onDownloadMessages;
     //to preview your message
     document.getElementById("preview_text").onclick = onPreviewMessage;
-    //add some color to the text
-    document.getElementById("color_text").onclick = onColor;
-    // Prevent capturing focus by the button.
-    $('#color_text').on('mousedown', function (event) {
-        event.preventDefault();
-    });
-    // If we pressed the 'enter' key being inside the 'commandInput', send the message to improve accessibility and making it nicer.
-    /*document.getElementById("commandInput").onkeydown = function (e) {
-        if (e.keyCode === 13) {
-            onSend();
-        } else {
-            //onSendTyping();
-        }
-    };*/
-    document.getElementById("commandInput").onkeyup = function (e) {
-        if (e.keyCode === 13) {
+
+    //stylize text
+    setTextButtonUp("color_text", onColor);
+    setTextButtonUp("italics_text", onItalics);
+    setTextButtonUp("bold_text", onBold);
+    setTextButtonUp("underline_text", onUnderline);
+    setTextButtonUp("strikethrough_text", onStrikethrough);
+    setTextButtonUp("img_text", onImg);
+    setTextButtonUp("code_text", onCode);
+    setTextButtonUp("url_text", onURL);
+
+    document.getElementById("commandInput").onkeypress = function (e) {
+        console.log(e.code);
+        if (e.code === 'Enter') {
             if (!tributeEntered) {
-                let content = this.value;
-                let caret = getCaret(this);
-                if (event.shiftKey) {
-                    this.value = content.substring(0, caret - 1) + "\n" + content.substring(caret, content.length);
+                if (e.shiftKey) {
+                    //Don't do anything
                 } else {
+                    e.preventDefault();
                     onSend();
                 }
             }
             tributeEntered = false;
+        } else if(e.ctrlKey) {
+            switch (e.key) {
+                case 'i':
+                    onItalics();
+                    break;
+                case 'b':
+                    onBold();
+                    break;
+                case 'c':
+                    onColor();
+                    break;
+                case 'u':
+                    onUnderline();
+                    break;
+                case 's':
+                    onStrikethrough();
+                    break;
+                default:
+                    break;
+            }
         }
         onSendTyping();
+    };
+
+    document.getElementById("commandInput").oninput = function () {
+        previewText();
     };
 
     document.getElementById('commandInput').addEventListener('tribute-replaced', function (e) {
@@ -517,6 +564,13 @@ function start() {
         tributeEntered = true;
     });
 
+}
+
+function parseBBCode(text) {
+    const parsed = core.process(text, {
+        render: BbobHtml.render,
+    });
+    return parsed.html;
 }
 
 /**

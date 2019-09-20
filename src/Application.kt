@@ -540,7 +540,6 @@ data class ChatSession(val id: String)
 data class Action(val type: String, val json: String)
 data class TypingIndicator(val isTyping: Boolean)
 data class DownloadMessages(val download: Boolean)
-data class PreviewText(val text: String)
 
 /**
  * We received a message. Let's process it.
@@ -559,10 +558,6 @@ private suspend fun receivedMessage(id: String, command: String) {
             "Download" -> {
                 //val download = Gson().fromJson<DownloadMessages>(action.json, DownloadMessages::class.java)
                 server.downloadMessages(id)
-            }
-            "Preview" -> {
-                val preview = Gson().fromJson<PreviewText>(action.json, PreviewText::class.java)
-                server.previewMessage(id, preview)
             }
         }
     } catch (e: Exception) {
