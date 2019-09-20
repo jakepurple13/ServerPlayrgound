@@ -82,6 +82,12 @@ body {
 }*/
 
 .bootstrap_button_locate {
+    padding-right: 5px;
+    margin-right: 5px;
+    /*margin: 5px 5px;*/
+}
+
+.bootstrap_button_locate_all {
 
     padding-left: 5px;
     margin-left: 5px;

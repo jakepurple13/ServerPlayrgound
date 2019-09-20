@@ -209,8 +209,7 @@ class ChatServer {
     suspend fun message(sender: String, message: String) {
         // Pre-format the message to be send, to prevent doing it for all the users or connected sockets.
         val name = memberNames[sender]?.name ?: sender
-        val formatted = "[$name] ${message.replace("\n", "<br />")}"
-
+        val formatted = "$name: $message"
         // Sends this pre-formatted message to all the members in the server.
         broadcast(sender, formatted, MessageType.MESSAGE)
     }
@@ -221,7 +220,7 @@ class ChatServer {
     suspend fun actionMessage(sender: String, message: String) {
         // Pre-format the message to be send, to prevent doing it for all the users or connected sockets.
         val name = memberNames[sender]?.name ?: sender
-        val formatted = "<i>$name${message.replace("\n", "<br />")}</i>"
+        val formatted = "[i]$name$message[/i]"
 
         // Sends this pre-formatted message to all the members in the server.
         broadcast(sender, formatted, MessageType.MESSAGE)

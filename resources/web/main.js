@@ -324,6 +324,7 @@ function write(message) {
         // We scroll the container to where this text is so the use can see it on long conversations if he/she has scrolled up.
         messagesDiv.scrollTop = line.offsetTop;
     }
+    Prism.highlightAll();
 }
 
 function notify(user, message, image) {
@@ -510,8 +511,10 @@ function setTextButtonUp(id, method) {
     preventFocus("#" + id);
 }
 
+const inputElement = document.getElementById("commandInput");
+
 function previewText() {
-    document.getElementById("preview_message").innerHTML = parseBBCode(document.getElementById("commandInput").value.replace(/\n/g, "<br />"));
+    document.getElementById("preview_message").innerHTML = parseBBCode(inputElement.value);//.replace(/\n\r?/g, '<br />'));//.replace(/\n/g, "<br />"));
     let objDiv = document.getElementById("preview_message");
     objDiv.scrollTop = objDiv.scrollHeight;
 }
@@ -547,13 +550,15 @@ function start() {
             if (!tributeEntered) {
                 if (e.shiftKey) {
                     //Don't do anything
+                    //this.value.replace(/\n\r?/g, '<br />');
+                    //this.value = this.value.replace(/\n\r?/g, '<br />');
                 } else {
                     e.preventDefault();
                     onSend();
                 }
             }
             tributeEntered = false;
-        } else if(e.ctrlKey) {
+        } else if (e.ctrlKey) {
             switch (e.key) {
                 case 'i':
                     onItalics();
