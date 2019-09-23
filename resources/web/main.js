@@ -7,6 +7,8 @@ let retryAttempts = 0;
 let tribute;
 let tributeEntered = false;
 
+const inputElement = document.getElementById("commandInput");
+
 Prism.plugins.NormalizeWhitespace.setDefaults({
     'remove-trailing': true,
     'remove-indent': true,
@@ -85,7 +87,7 @@ function connect() {
     // we have this handler to notify to the user via the messages container.
     // Also we will retry a connection after 5 seconds.
     socket.onclose = function (evt) {
-        tribute.detach(document.getElementById('commandInput'));
+        tribute.detach(inputElement);
         // Try to gather an explanation about why this was closed.
         let explanation = "";
         if (evt.reason && evt.reason.length > 0) {
@@ -164,7 +166,7 @@ function setUpAutocomplete() {
         // turn tribute into an autocomplete
         //autocompleteMode: true,
     });
-    tribute.attach(document.getElementById('commandInput'));
+    tribute.attach(inputElement);
 }
 
 /**
@@ -199,7 +201,7 @@ function setUpUserList(userDiv, chatter) {
     userContainer.appendChild(pDiv);
 
     userContainer.addEventListener("click", function () {
-        const input = document.getElementById("commandInput");
+        const input = inputElement;
         input.value = "/pm " + chatter.name + " ";
         input.focus();
     });
@@ -481,7 +483,7 @@ function insertText(textToInsert, middle) {
 }
 
 function onColor() {
-    insertText("[color=\"\"][/color]", 10);
+    insertText("[color=][/color]", 8);
 }
 
 function onItalics() {
@@ -532,8 +534,6 @@ function setTextButtonUp(id, method) {
     preventFocus("#" + id);
 }
 
-const inputElement = document.getElementById("commandInput");
-
 function previewText() {
     let objDiv = document.getElementById("preview_message");
     objDiv.innerHTML = getObjText(inputElement.value);
@@ -552,13 +552,13 @@ function start() {
     // First, we should connect to the server.
     connect();
     // If we click the sendButton, let's send the message.
-    document.getElementById("sendButton").onclick = onSend;
+    setTextButtonUp("sendButton", onSend);
     // To change information
     document.getElementById("saveChanges").onclick = onProfileChange;
     //to download all the messages
     document.getElementById("download_messages").onclick = onDownloadMessages;
     //to preview your message
-    document.getElementById("preview_text").onclick = onPreviewMessage;
+    setTextButtonUp("preview_text", onPreviewMessage);
     //stylize text
     setTextButtonUp("color_text", onColor);
     setTextButtonUp("italics_text", onItalics);

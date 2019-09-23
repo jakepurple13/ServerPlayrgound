@@ -35,16 +35,14 @@ import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.sessions.*
 import io.ktor.util.generateNonce
+import io.ktor.util.pipeline.PipelineContext
 import io.ktor.websocket.WebSockets
 import io.ktor.websocket.webSocket
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
 import kotlinx.html.*
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.select
-import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.text.SimpleDateFormat
 import java.time.Duration
@@ -88,8 +86,7 @@ private fun Application.database(db: Database) {
         //createEverything(db, ShowApi.getAllRecent())
         //createEverything(db, ShowApi(Source.RECENT_CARTOON).showInfoList)
         //prettyLog(ShowApi(Source.LIVE_ACTION_MOVIES).showInfoList)
-        //createEverything(db, ShowApi.getSources(Source.ANIME, Source.DUBBED, Source.CARTOON, Source.CARTOON_MOVIES))
-
+        //createEverything(db, ShowApi.getSources(Source.ANIME, Source.DUBBED, Source.CARTOON, Source.CARTOON_MOVIES, Source.LIVE_ACTION))
         //createEverything(db, ShowApi.getSources(Source.ANIME, Source.CARTOON, Source.DUBBED, Source.LIVE_ACTION))
         //createEverything(db, ShowApi.getSources(Source.CARTOON_MOVIES, Source.LIVE_ACTION_MOVIES))
     }
@@ -213,13 +210,7 @@ private fun Application.routing(db: Database, simpleJwt: SimpleJWT) {
                 if (episode != null)
                     call.respond(FreeMarkerContent("epview.ftl", mapOf("data" to episode)))
                 else
-                    call.respondHtml {
-                        body {
-                            p {
-                                +"404! Show not found"
-                            }
-                        }
-                    }
+                    notFound("Show not found")
             }
         }
 
@@ -239,6 +230,69 @@ private fun Application.routing(db: Database, simpleJwt: SimpleJWT) {
                     }
                 }
             }
+        }
+
+        route("/shows/{level}") {
+            get {
+                val level = call.parameters["level"]!!
+                val checkLevel = when (level.toLowerCase()) {
+                    "0-9" -> ('0'..'9')
+                    "a" -> listOf('a', 'A')
+                    "b" -> listOf('b', 'B')
+                    "c" -> listOf('c', 'C')
+                    "d" -> listOf('d', 'D')
+                    "e" -> listOf('e', 'E')
+                    "f" -> listOf('f', 'F')
+                    "g" -> listOf('g', 'G')
+                    "h" -> listOf('h', 'H')
+                    "i" -> listOf('i', 'I')
+                    "j" -> listOf('j', 'J')
+                    "k" -> listOf('k', 'K')
+                    "l" -> listOf('l', 'L')
+                    "m" -> listOf('m', 'M')
+                    "n" -> listOf('n', 'N')
+                    "o" -> listOf('o', 'O')
+                    "p" -> listOf('p', 'P')
+                    "q" -> listOf('q', 'Q')
+                    "r" -> listOf('r', 'R')
+                    "s" -> listOf('s', 'S')
+                    "t" -> listOf('t', 'T')
+                    "u" -> listOf('u', 'U')
+                    "v" -> listOf('v', 'V')
+                    "w" -> listOf('w', 'W')
+                    "x" -> listOf('x', 'X')
+                    "y" -> listOf('y', 'Y')
+                    "z" -> listOf('z', 'Z')
+                    else -> null
+                }?.map { "$it" }
+                var list = listOf<EpisodeApiInfo>()
+                if (!checkLevel.isNullOrEmpty()) {
+                    transaction(db) {
+                        list = Episodes.select {
+                            try {
+                                Episodes.name.substring(1, 1) inList checkLevel
+                            } catch (e: Exception) {
+                                Episodes.name neq Episodes.name
+                            }
+                        }
+                            .map {
+                                EpisodeApiInfo(
+                                    it[Episodes.name],
+                                    it[Episodes.image],
+                                    it[Episodes.url],
+                                    it[Episodes.description]
+                                )
+                            }
+                            .sortedBy { it.name }
+                    }
+                    call.respond(FreeMarkerContent("table.ftl", mapOf("data" to list)))
+                } else {
+                    notFound("Unable to Retrieve")
+                }
+
+
+            }
+
         }
 
         route("/") {
@@ -261,6 +315,16 @@ private fun Application.routing(db: Database, simpleJwt: SimpleJWT) {
         }
         static("/static") {
             resources("static")
+        }
+    }
+}
+
+suspend fun PipelineContext<Unit, ApplicationCall>.notFound(text: String = "Not Found") {
+    call.respondHtml {
+        body {
+            p {
+                +"404! $text"
+            }
         }
     }
 }
@@ -516,7 +580,17 @@ data class EpisodeApiInfo(
     val url: String = "",
     val description: String = "",
     val episodeList: List<EpListInfo> = emptyList()
-)
+) {
+    companion object {
+        fun fromApi(ea: EpisodeApi) = EpisodeApiInfo(
+            ea.name,
+            ea.image,
+            ea.source.url,
+            ea.description,
+            ea.episodeList.map { EpListInfo(it.name, it.url) })
+        //fun fromDB(ea: Episodes) = EpisodeApiInfo()
+    }
+}
 
 class ChatClient(val session: DefaultWebSocketSession) {
     companion object {

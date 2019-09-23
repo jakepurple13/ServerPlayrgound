@@ -100,7 +100,6 @@
     table.bootstrapTable({
         exportDataType: "all",
         onClickRow: function (row, element, field) {
-            var type = "";
             console.log(element[0]);
             var u = element[0].cells[1].innerHTML;
             openEpisode(u);
