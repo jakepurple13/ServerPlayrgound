@@ -19,16 +19,27 @@ Prism.plugins.NormalizeWhitespace.setDefaults({
     'spaces-to-tabs': 4*/
 });
 
+const getUniqAttr = attrs => Object
+    .keys(attrs)
+    .reduce((res, key) => (attrs[key] === key ? attrs[key] : null), null);
+
 const myPreset = BbobPresetHTML5.extend(tags => ({
     ...tags,
     code: (node, core) => ({
         ...tags.code(node, core),
-        /*content: '<code class="language-' + node.attrs.lang + '">' + node.content.join('') + "</code>"*/
-        /*content: '<code class="lang-' + node.attrs.lang + '">' + node.content.join('') + "</code>"*/
-        /*content: '<code class="line-numbers lang-java">' + node.content.join('') + '</code>'*/
-        content: '<code class="line-numbers lang-' + node.attrs.lang + '">' + node.content.join('') + '</code>'
-        /*content: '<code class="' + node.attrs.lang + '">' + node.content.join('') + "</code>"*/
-        /*content: Prism.highlight(node.content.join(''), Prism.languages.javascript)*/
+        content: '<code class="line-numbers lang-' + getUniqAttr(node.attrs) + '">' + node.content.join('') + '</code>'
+    }),
+    color: (node) => ({
+        tag: 'span style="color:' + getUniqAttr(node.attrs) + '"',
+        content: node.content.join('')//'<span style="color:' + node.attrs.color + '">' + node.content.join('') + '</span>'
+    }),
+    big: (node) => ({
+        tag: "big",
+        content: '<span style="font-size:20px">' + node.content.join('') + '</span>'
+    }),
+    small: (node) => ({
+        tag: "small",
+        content: '<span style="font-size:10px">' + node.content.join('') + '</span>'
     })
 }));
 const core = BbobCore(myPreset());
@@ -213,7 +224,7 @@ function messageSetUp(div, obj) {
     textDiv.className = "text_layer inner";
     const line = document.createElement("p");
     line.className = "message";
-    line.innerHTML = parseBBCode(obj.message);
+    line.innerHTML = getObjText(obj.message);
     textDiv.appendChild(line);
     div.appendChild(imgDiv);
     div.appendChild(textDiv);
@@ -359,10 +370,12 @@ function onSend() {
 }
 
 function onSendTyping() {
-    const input = document.getElementById("commandInput");
+    //const input = document.getElementById("commandInput");
+    const input = document.getElementById("preview_message");
     // Validates that the input exists
     if (input) {
-        const text = input.value.trim();
+        //const text = input.value.trim();
+        const text = input.innerHTML.trim();
         // Validates that there is a text and that the socket exists
         let typing = {
             isTyping: text.length !== 0 && socket.readyState === 1 && !text.includes("/pm")
@@ -468,7 +481,7 @@ function insertText(textToInsert, middle) {
 }
 
 function onColor() {
-    insertText("[style color=\"\"][/style]", 16);
+    insertText("[color=\"\"][/color]", 10);
 }
 
 function onItalics() {
@@ -492,11 +505,19 @@ function onImg() {
 }
 
 function onCode() {
-    insertText("[code lang=\"\"][/code]", 14);
+    insertText("[code=][/code]", 7);
 }
 
 function onURL() {
     insertText("[url=][/url]", 6);
+}
+
+function onBig() {
+    insertText("[big][/big]", 5);
+}
+
+function onSmall() {
+    insertText("[small][/small]", 7);
 }
 
 function preventFocus(id) {
@@ -514,9 +535,14 @@ function setTextButtonUp(id, method) {
 const inputElement = document.getElementById("commandInput");
 
 function previewText() {
-    document.getElementById("preview_message").innerHTML = parseBBCode(inputElement.value);//.replace(/\n\r?/g, '<br />'));//.replace(/\n/g, "<br />"));
     let objDiv = document.getElementById("preview_message");
+    objDiv.innerHTML = getObjText(inputElement.value);
     objDiv.scrollTop = objDiv.scrollHeight;
+}
+
+function getObjText(text) {
+    return "<pre>" + parseBBCode(text) + "</pre>";
+    //return parseBBCode(text);
 }
 
 /**
@@ -525,7 +551,6 @@ function previewText() {
 function start() {
     // First, we should connect to the server.
     connect();
-
     // If we click the sendButton, let's send the message.
     document.getElementById("sendButton").onclick = onSend;
     // To change information
@@ -534,13 +559,14 @@ function start() {
     document.getElementById("download_messages").onclick = onDownloadMessages;
     //to preview your message
     document.getElementById("preview_text").onclick = onPreviewMessage;
-
     //stylize text
     setTextButtonUp("color_text", onColor);
     setTextButtonUp("italics_text", onItalics);
     setTextButtonUp("bold_text", onBold);
     setTextButtonUp("underline_text", onUnderline);
     setTextButtonUp("strikethrough_text", onStrikethrough);
+    setTextButtonUp("increase_text", onBig);
+    setTextButtonUp("decrease_text", onSmall);
     setTextButtonUp("img_text", onImg);
     setTextButtonUp("code_text", onCode);
     setTextButtonUp("url_text", onURL);
@@ -574,6 +600,12 @@ function start() {
                     break;
                 case 's':
                     onStrikethrough();
+                    break;
+                case 'ArrowDown':
+                    onSmall();
+                    break;
+                case 'ArrowUp':
+                    onBig();
                     break;
                 default:
                     break;
