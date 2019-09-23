@@ -112,18 +112,19 @@
 </body>
 <script>
     function getVidLink(num) {
-        var url = $("#vidlink" + num).val()
+        var url = $("#vidlink" + num).val();
         if (url.includes("putlocker")) {
             $("#showlink" + num).text("Sorry, the video link won't work if retrieved from here")
         } else {
-            $("#showlink" + num).text("Retrieving")
+            $("#showlink" + num).text("Retrieving");
             $.ajax({
                 type: "GET",//or POST
                 url: "/api/video/" + url.replaceAll("/", "_") + ".json",
                 dataType: 'json',
                 success: function (responsedata) {
-                    $("#showlink" + num).attr("href", responsedata.VideoLink);
-                    $("#showlink" + num).text("Link get!");
+                    let s = $("#showlink" + num);
+                    s.attr("href", responsedata.VideoLink);
+                    s.text("Link get!");
                 }
             })
         }

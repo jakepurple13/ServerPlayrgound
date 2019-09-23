@@ -472,6 +472,7 @@ fun Route.webApi(db: Database) {
             }
         }
         getShowType(db)
+        randomShow(db)
     }
 }
 
@@ -527,6 +528,7 @@ fun Route.userApi(db: Database) {
             }
         }
         getShowType(db)
+        randomShow(db)
     }
 }
 
@@ -539,6 +541,16 @@ fun Route.getShowType(db: Database) {
                 .sortedBy { it.name }
         }
         call.respond(list)
+    }
+}
+
+fun Route.randomShow(db: Database) {
+    get("/random.json") {
+        var showInfo = ShowInfo("", "")
+        transaction(db) {
+            showInfo = Shows.selectAll().map { ShowInfo(it[Shows.name], it[Shows.url]) }.random()
+        }
+        call.respond(showInfo)
     }
 }
 

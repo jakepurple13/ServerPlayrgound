@@ -23,8 +23,8 @@
 <div id="toolbar">
     <div class="input-group mb-3">
         <div class="input-group-prepend">
-            <button id="remove" class="btn btn-primary"><i class="glyphicon glyphicon-remove"></i> Random From Current
-                View
+            <button id="remove" class="btn btn-primary">
+                Random
             </button>
         </div>
         <select class="custom-select" id="locale" onchange='loadNewData()'>
@@ -41,6 +41,9 @@
             <button id="go_to_chat" class="btn btn-primary"><i class="glyphicon glyphicon-remove"></i>Chat</button>
         </div>
     </div>
+    <button id="view_shows_by_letter" class="btn btn-primary">
+        View Shows By Letter
+    </button>
 </div>
 <table
         class="table-dark"
@@ -91,6 +94,7 @@
 </body>
 <script>
     var table = $('#table');
+
     function loadNewData() {
         var url = $('#locale').val();
         console.log(url);
@@ -103,15 +107,24 @@
             console.log(element[0]);
             var u = element[0].cells[1].innerHTML;
             openEpisode(u);
-        }});
+        }
+    });
 
     $('#remove').click(function () {
-        var d = document.getElementsByTagName('tr');
-        d[Math.floor(Math.random() * d.length - 1)].cells[0].dispatchEvent(new Event('click'));
+        $.getJSON({
+            url: '/api/web/random.json',
+            success: function (json) {
+                openEpisode(json.url);
+            }
+        });
     });
 
     $('#go_to_chat').click(function () {
         window.open("/chat", '_blank');
+    });
+
+    $('#view_shows_by_letter').click(function () {
+        window.open("/shows/0-9", '_blank');
     });
 
     function customSearch(data, text) {
