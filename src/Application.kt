@@ -624,6 +624,12 @@ data class Action(val type: String, val json: String)
 data class TypingIndicator(val isTyping: Boolean)
 data class DownloadMessages(val download: Boolean)
 
+enum class ChatCommands(val command: String) {
+    DYK("/dyk"), WHO("/who"), SHOW("/show "),
+    HELP("/help"), PRIVATE_MESSAGE("/pm "), ACTION("/me"),
+    USER("/user "), IMAGE("/image ")
+}
+
 /**
  * We received a message. Let's process it.
  */
@@ -645,11 +651,11 @@ private suspend fun receivedMessage(id: String, command: String) {
         }
     } catch (e: Exception) {
         when {
-            command.startsWith("/dyk") -> server.didYouKnow()
+            command.startsWith(ChatCommands.DYK.command) -> server.didYouKnow()
             // The command `who` responds the user about all the member names connected to the user.
-            command.startsWith("/who") -> server.who(id)
+            command.startsWith(ChatCommands.WHO.command) -> server.who(id)
             // The command `user` allows the user to set its name.
-            command.startsWith("/user ") -> {
+            command.startsWith(ChatCommands.USER.command) -> {
                 // We strip the command part to get the rest of the parameters.
                 // In this case the only parameter is the user's newName.
                 val newName = command.removePrefix("/user").trim()
@@ -664,11 +670,11 @@ private suspend fun receivedMessage(id: String, command: String) {
                     else -> server.memberRenamed(id, newName)
                 }
             }
-            command.startsWith("/show ") -> {
+            command.startsWith(ChatCommands.SHOW.command) -> {
                 val showName = command.removePrefix("/show")
                 server.getShow(DbSettings.db, showName, id)
             }
-            command.startsWith("/image ") -> {
+            command.startsWith(ChatCommands.IMAGE.command) -> {
                 // We strip the command part to get the rest of the parameters.
                 // In this case the only parameter is the user's newName.
                 val newName = command.removePrefix("/image ").trim()
@@ -679,9 +685,9 @@ private suspend fun receivedMessage(id: String, command: String) {
                 }
             }
             // The command 'help' allows users to get a list of available commands.
-            command.startsWith("/help") -> server.help(id)
-            command.startsWith("/me") -> server.actionMessage(id, command.removePrefix("/me"))
-            command.startsWith("/pm ") -> {
+            command.startsWith(ChatCommands.HELP.command) -> server.help(id)
+            command.startsWith(ChatCommands.ACTION.command) -> server.actionMessage(id, command.removePrefix("/me"))
+            command.startsWith(ChatCommands.PRIVATE_MESSAGE.command) -> {
                 val recipient = command.removePrefix("/pm ").split(" ")[0].trim()
                 server.sendTo(
                     recipient,

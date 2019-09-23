@@ -146,7 +146,7 @@ class ChatServer {
         //val text = "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} [server::help] Possible commands are: /user, /help, /me and /who"
         val sendMessage = SendMessage(
             ChatUser("Server"),
-            "[server::help] Possible commands are: /user, /help, /me and /who",
+            "[server::help] Possible commands are: ${ChatCommands.values().joinToString(", ")}",
             MessageType.SERVER
         )
         members[sender]?.send(Frame.Text(sendMessage.toJson()))
