@@ -645,6 +645,7 @@ private suspend fun receivedMessage(id: String, command: String) {
         }
     } catch (e: Exception) {
         when {
+            command.startsWith("/dyk") -> server.didYouKnow()
             // The command `who` responds the user about all the member names connected to the user.
             command.startsWith("/who") -> server.who(id)
             // The command `user` allows the user to set its name.

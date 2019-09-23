@@ -541,7 +541,7 @@ function previewText() {
 }
 
 function getObjText(text) {
-    return "<pre>" + parseBBCode(text) + "</pre>";
+    return "<pre style='white-space: pre-wrap'>" + parseBBCode(text) + "</pre>";
     //return parseBBCode(text);
 }
 

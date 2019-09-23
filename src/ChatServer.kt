@@ -1,6 +1,8 @@
 package com.example
 
 import com.google.gson.Gson
+import io.ktor.client.HttpClient
+import io.ktor.client.request.get
 import io.ktor.http.cio.websocket.CloseReason
 import io.ktor.http.cio.websocket.Frame
 import io.ktor.http.cio.websocket.WebSocketSession
@@ -8,6 +10,8 @@ import io.ktor.http.cio.websocket.close
 import kotlinx.coroutines.channels.ClosedSendChannelException
 import kotlinx.html.*
 import kotlinx.html.stream.createHTML
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.text.SimpleDateFormat
@@ -15,6 +19,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
+import java.io.IOException
 
 
 class ChatUser(var name: String, var image: String = "https://www.w3schools.com/w3images/bandmember.jpg")
@@ -58,7 +63,7 @@ class ChatServer {
         val name = memberNames.computeIfAbsent(member) {
             usersCounter.incrementAndGet()
             var n = randomName()
-            while(memberNames.values.any { it.name==n }) {
+            while (memberNames.values.any { it.name == n }) {
                 n = randomName()
             }
             ChatUser(n)
@@ -173,7 +178,8 @@ class ChatServer {
             members[sender]?.send(Frame.Text(sendMessage.toJson()))
         } else {
             val user = memberNames[sender]!!
-            val sendMessage = SendMessage(user, "[${user.name} => $recipient] $message", MessageType.MESSAGE, data = "pm")
+            val sendMessage =
+                SendMessage(user, "[${user.name} => $recipient] $message", MessageType.MESSAGE, data = "pm")
             members[sendToUser]?.send(Frame.Text(sendMessage.toJson()))
             members[sender]?.send(Frame.Text(sendMessage.toJson()))
         }
@@ -224,6 +230,31 @@ class ChatServer {
 
         // Sends this pre-formatted message to all the members in the server.
         broadcast(sender, formatted, MessageType.MESSAGE)
+    }
+
+    data class DidYouKnowFact(
+        val id: String,
+        val text: String,
+        val source_url: String,
+        val language: String,
+        val permalink: String
+    )
+
+    @Throws(IOException::class)
+    private fun run(url: String): String? {
+        val client = OkHttpClient();
+        val request = Request.Builder()
+            .url(url)
+            .build()
+
+        client.newCall(request).execute().use { response -> return response.body?.string() }
+    }
+
+    suspend fun didYouKnow() {
+        val url = "https://uselessfacts.jsph.pl/random.json?language=en"
+        val d = Gson().fromJson(run(url), DidYouKnowFact::class.java)
+        prettyLog(d)
+        broadcast("Server", d.text, MessageType.MESSAGE)
     }
 
     enum class MessageType {
