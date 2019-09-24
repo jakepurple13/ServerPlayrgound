@@ -7,6 +7,8 @@ let retryAttempts = 0;
 let tribute;
 let tributeEntered = false;
 
+let lastMessage = "";
+
 const inputElement = document.getElementById("commandInput");
 
 Prism.plugins.NormalizeWhitespace.setDefaults({
@@ -302,6 +304,8 @@ function write(message) {
         while (userDiv.hasChildNodes()) {
             userDiv.firstChild.remove()
         }
+        //document.getElementById("username_change").value = obj.data[0].name;
+        //document.getElementById("image_change").value = obj.data[0].image;
         for (let user in obj.data) {
             let chatter = obj.data[user];
             console.log(chatter);
@@ -362,6 +366,7 @@ function onSend() {
         const text = input.value.trim();
         // Validates that there is a text and that the socket exists
         if (text && socket) {
+            lastMessage = text;
             // Sends the text
             socket.send(text);
             // Clears the input so the user can type a new command or text to say
@@ -388,16 +393,18 @@ function onSendTyping() {
 
 function onProfileChange() {
 
+    let profileChange = {
+        username: null,
+        image: null
+    };
+
     const username = document.getElementById("username_change");
     // Validates that the input exists
     if (username) {
         let text = username.value;
         // Validates that there is a text and that the socket exists
         if (text && socket) {
-            // Sends the text
-            socket.send("/user " + text);
-            // Clears the input so the user can type a new command or text to say
-            //username.value = "";
+            profileChange.username = text;
         }
     }
 
@@ -407,12 +414,11 @@ function onProfileChange() {
         let text = image.value;
         // Validates that there is a text and that the socket exists
         if (text && socket) {
-            // Sends the text
-            socket.send("/image " + text);
-            // Clears the input so the user can type a new command or text to say
-            //image.value = "";
+            profileChange.image = text;
         }
     }
+
+    actionSend("Profile", profileChange);
 }
 
 function onDownloadMessages() {
@@ -570,6 +576,13 @@ function start() {
     setTextButtonUp("img_text", onImg);
     setTextButtonUp("code_text", onCode);
     setTextButtonUp("url_text", onURL);
+
+    inputElement.onkeydown = function (e) {
+        if (inputElement.value === "" && e.key === 'ArrowUp') {
+            inputElement.value = lastMessage;
+            setCaretPosition("commandInput", lastMessage.length);
+        }
+    };
 
     document.getElementById("commandInput").onkeypress = function (e) {
         if (e.code === 'Enter') {

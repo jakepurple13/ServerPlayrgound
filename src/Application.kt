@@ -623,11 +623,13 @@ data class ChatSession(val id: String)
 data class Action(val type: String, val json: String)
 data class TypingIndicator(val isTyping: Boolean)
 data class DownloadMessages(val download: Boolean)
+data class Profile(val username: String?, val image: String?)
 
-enum class ChatCommands(val command: String) {
-    DYK("/dyk"), WHO("/who"), SHOW("/show "),
-    HELP("/help"), PRIVATE_MESSAGE("/pm "), ACTION("/me"),
-    USER("/user "), IMAGE("/image ")
+enum class ChatCommands(val command: String, val helpText: String = "") {
+    DYK("/dyk", "Prints a random Did You Know fact."), WHO("/who", "Shows who's on the server."),
+    SHOW("/show ", "Displays info about a show from the database. If you type @ first, you can autocomplete a show."),
+    HELP("/help", "Shows this message."), PRIVATE_MESSAGE("/pm ", "Private message someone"),
+    ACTION("/me", "Show an action. It will be in all italics.")
 }
 
 /**
@@ -635,9 +637,7 @@ enum class ChatCommands(val command: String) {
  */
 private suspend fun receivedMessage(id: String, command: String) {
     // We are going to handle commands (text starting with '/') and normal messages
-    prettyLog(command)
     try {
-
         val action = Gson().fromJson<Action>(command, Action::class.java)
         when (action.type) {
             "Typing" -> {
@@ -645,44 +645,30 @@ private suspend fun receivedMessage(id: String, command: String) {
                 server.isTyping(id, typing)
             }
             "Download" -> {
+                prettyLog(command)
                 //val download = Gson().fromJson<DownloadMessages>(action.json, DownloadMessages::class.java)
                 server.downloadMessages(id)
             }
+            "Profile" -> {
+                prettyLog(command)
+                val profile = Gson().fromJson<Profile>(action.json, Profile::class.java)
+                profile.username?.let {
+                    server.memberRenamed(id, it)
+                }
+                profile.image?.let {
+                    server.memberImageChange(id, it)
+                }
+            }
         }
     } catch (e: Exception) {
+        prettyLog(command)
         when {
             command.startsWith(ChatCommands.DYK.command) -> server.didYouKnow()
             // The command `who` responds the user about all the member names connected to the user.
             command.startsWith(ChatCommands.WHO.command) -> server.who(id)
-            // The command `user` allows the user to set its name.
-            command.startsWith(ChatCommands.USER.command) -> {
-                // We strip the command part to get the rest of the parameters.
-                // In this case the only parameter is the user's newName.
-                val newName = command.removePrefix("/user").trim()
-                // We verify that it is a valid name (in terms of length) to prevent abusing
-                when {
-                    newName.isEmpty() -> server.sendTo(id, "server::help", "/user [newName]")
-                    newName.length > 50 -> server.sendTo(
-                        id,
-                        "server::help",
-                        "new name is too long: 50 characters limit"
-                    )
-                    else -> server.memberRenamed(id, newName)
-                }
-            }
             command.startsWith(ChatCommands.SHOW.command) -> {
                 val showName = command.removePrefix("/show")
                 server.getShow(DbSettings.db, showName, id)
-            }
-            command.startsWith(ChatCommands.IMAGE.command) -> {
-                // We strip the command part to get the rest of the parameters.
-                // In this case the only parameter is the user's newName.
-                val newName = command.removePrefix("/image ").trim()
-                // We verify that it is a valid name (in terms of length) to prevent abusing
-                when {
-                    newName.isEmpty() -> server.sendTo(id, "server::help", "/image [newImage]")
-                    else -> server.memberImageChange(id, newName)
-                }
             }
             // The command 'help' allows users to get a list of available commands.
             command.startsWith(ChatCommands.HELP.command) -> server.help(id)

@@ -1,8 +1,6 @@
 package com.example
 
 import com.google.gson.Gson
-import io.ktor.client.HttpClient
-import io.ktor.client.request.get
 import io.ktor.http.cio.websocket.CloseReason
 import io.ktor.http.cio.websocket.Frame
 import io.ktor.http.cio.websocket.WebSocketSession
@@ -14,12 +12,12 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
-import java.io.IOException
 
 
 class ChatUser(var name: String, var image: String = "https://www.w3schools.com/w3images/bandmember.jpg")
@@ -146,7 +144,7 @@ class ChatServer {
         //val text = "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} [server::help] Possible commands are: /user, /help, /me and /who"
         val sendMessage = SendMessage(
             ChatUser("Server"),
-            "[server::help] Possible commands are: ${ChatCommands.values().joinToString(", ") { it.command.trim() }}",
+            "[server::help] Possible commands are: ${ChatCommands.values().joinToString(", ") { "${it.command.trim()} (${it.helpText})" }}",
             MessageType.SERVER
         )
         members[sender]?.send(Frame.Text(sendMessage.toJson()))
@@ -179,7 +177,7 @@ class ChatServer {
         } else {
             val user = memberNames[sender]!!
             val sendMessage =
-                SendMessage(user, "[${user.name} => $recipient] $message", MessageType.MESSAGE, data = "pm")
+                SendMessage(user, "(${user.name} => $recipient) $message", MessageType.MESSAGE, data = "pm")
             members[sendToUser]?.send(Frame.Text(sendMessage.toJson()))
             members[sender]?.send(Frame.Text(sendMessage.toJson()))
         }
@@ -201,7 +199,6 @@ class ChatServer {
         }
         prettyLog(s)
         if (s.isEmpty()) {
-            //val text = "${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())} Show not found"
             val sendMessage = SendMessage(ChatUser("Server"), "Show not found", MessageType.SERVER)
             members[sender]?.send(Frame.Text(sendMessage.toJson()))
         } else {
