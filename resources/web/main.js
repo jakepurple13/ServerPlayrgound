@@ -584,6 +584,10 @@ function start() {
         }
     };
 
+    inputElement.onkeyup = function(e) {
+        onSendTyping();
+    };
+
     document.getElementById("commandInput").onkeypress = function (e) {
         if (e.code === 'Enter') {
             if (!tributeEntered) {
@@ -624,7 +628,6 @@ function start() {
                     break;
             }
         }
-        onSendTyping();
     };
 
     document.getElementById("commandInput").oninput = function () {

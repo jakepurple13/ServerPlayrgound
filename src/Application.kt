@@ -678,7 +678,7 @@ private suspend fun receivedMessage(id: String, command: String) {
                 server.sendTo(
                     recipient,
                     id,
-                    command.removePrefix("/pm ").split(" ").drop(1).joinToString { "$it " }.trim()
+                    command.removePrefix("/pm ").split(" ").drop(1).joinToString(" ").trim()
                 )
             }
             // If no commands matched at this point, we notify about it.
