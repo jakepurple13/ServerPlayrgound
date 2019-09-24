@@ -528,6 +528,14 @@ function onSmall() {
     insertText("[small][/small]", 7);
 }
 
+function onSup() {
+    insertText("[sup][/sup]", 5);
+}
+
+function onSub() {
+    insertText("[sub][/sub]", 5);
+}
+
 function preventFocus(id) {
     // Prevent capturing focus by the button.
     $(id).on('mousedown', function (event) {
@@ -576,6 +584,8 @@ function start() {
     setTextButtonUp("img_text", onImg);
     setTextButtonUp("code_text", onCode);
     setTextButtonUp("url_text", onURL);
+    setTextButtonUp("sup_text", onSup);
+    setTextButtonUp("sub_text", onSub);
 
     inputElement.onkeydown = function (e) {
         if (inputElement.value === "" && e.key === 'ArrowUp') {
