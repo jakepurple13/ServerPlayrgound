@@ -123,7 +123,7 @@
                 dataType: 'json',
                 success: function (responsedata) {
                     let s = $("#showlink" + num);
-                    s.attr("href", responsedata.VideoLink);
+                    s.attr("href", responsedata.videoLink);
                     s.text("Link get!");
                 }
             })

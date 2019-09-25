@@ -437,7 +437,7 @@ fun Route.api(db: Database) {
         get("/video/{url}.json") {
             val url = call.parameters["url"]!!
             val vla = VideoLinkApi(url.replace("_", "/")).getVideoLink()
-            call.respond(mapOf("VideoLink" to vla))
+            call.respond(mapOf("videoLink" to vla))
         }
         webApi(db)
         userApi(db)
@@ -452,6 +452,9 @@ fun Route.webApi(db: Database) {
                 list = Shows.selectAll().map { ShowInfo(it[Shows.name], it[Shows.url]) }.sortedBy { it.name }
             }
             call.respond(list)
+        }
+        get("/allEpisodes.json") {
+            call.respond(getAllEpisodes(db))
         }
         get("/nameAll.json") {
             var list = listOf<String>()
@@ -476,6 +479,23 @@ fun Route.webApi(db: Database) {
     }
 }
 
+private fun getAllEpisodes(db: Database): List<ChatServer.EpisodeApiInfo> {
+    var list = listOf<ChatServer.EpisodeApiInfo>()
+    transaction(db) {
+        list = Episodes.selectAll()
+            .map {
+                ChatServer.EpisodeApiInfo(
+                    it[Episodes.name],
+                    it[Episodes.image],
+                    it[Episodes.url],
+                    it[Episodes.description]
+                )
+            }
+            .sortedBy { it.name }.filter { !it.name.isBlank() }
+    }
+    return list
+}
+
 fun Route.userApi(db: Database) {
     route("/user") {
         get("/all.json") {
@@ -484,7 +504,10 @@ fun Route.userApi(db: Database) {
                 list = Shows.selectAll().map { ShowInfo(it[Shows.name], it[Shows.url]) }.sortedBy { it.name }
                 //list = Show.all().sortedBy { it.name }.map { ShowInfo(it.name, it.url) }
             }
-            call.respond(mapOf("Shows" to list))
+            call.respond(mapOf("shows" to list))
+        }
+        get("/allEpisodes.json") {
+            call.respond(mapOf("shows" to getAllEpisodes(db)))
         }
         get("/nsi/{name}.json") {
             val name = call.parameters["name"]!!
@@ -524,7 +547,7 @@ fun Route.userApi(db: Database) {
                 else -> null
             }?.let {
                 val s = if (it == Source.DUBBED) ShowApi.getAllRecent() else ShowApi(it).showInfoList
-                call.respond(mapOf("Shows" to synchronized(s) { s.toList() }))
+                call.respond(mapOf("shows" to synchronized(s) { s.toList() }))
             }
         }
         getShowType(db)
