@@ -113,21 +113,17 @@
 <script>
     function getVidLink(num) {
         var url = $("#vidlink" + num).val();
-        if (url.includes("putlocker")) {
-            $("#showlink" + num).text("Sorry, the video link won't work if retrieved from here")
-        } else {
-            $("#showlink" + num).text("Retrieving");
-            $.ajax({
-                type: "GET",//or POST
-                url: "/api/video/" + url.replaceAll("/", "_") + ".json",
-                dataType: 'json',
-                success: function (responsedata) {
-                    let s = $("#showlink" + num);
-                    s.attr("href", responsedata.videoLink);
-                    s.text("Link get!");
-                }
-            })
-        }
+        $("#showlink" + num).text("Retrieving");
+        $.ajax({
+            type: "GET",//or POST
+            url: "/api/video/" + url.replaceAll("/", "_") + ".json",
+            dataType: 'json',
+            success: function (responsedata) {
+                let s = $("#showlink" + num);
+                s.attr("href", responsedata.videoLink);
+                s.text("Link get!");
+            }
+        })
     }
 
     String.prototype.replaceAll = function (str1, str2, ignore) {
