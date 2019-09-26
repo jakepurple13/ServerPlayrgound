@@ -201,7 +201,7 @@
             $.ajax({
                 url: '/music/highScores.json',
                 type: "GET",
-                dataType: "html",
+                dataType: "json",
                 success: function (json) {
                     console.log(json);
                     //$("#highList").remove();
