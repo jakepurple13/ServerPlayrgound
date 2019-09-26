@@ -201,9 +201,10 @@
             $.ajax({
                 url: '/music/highScores.json',
                 type: "GET",
-                dataType: "json",
+                dataType: "html",
                 success: function (json) {
                     console.log(json);
+                    //$("#highList").remove();
                     $("#highList").remove();
                     const scoreList = document.createElement("dl");
                     scoreList.id = "highList";
@@ -220,6 +221,7 @@
                         }
                     }
                     $("#highScoreList").append(scoreList);
+                    //$("#highScoreList").text(json);
                 }
             });
         }
