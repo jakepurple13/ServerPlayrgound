@@ -1,5 +1,117 @@
 package com.example
 
+import com.google.gson.Gson
+import io.ktor.application.call
+import io.ktor.http.content.defaultResource
+import io.ktor.http.content.resources
+import io.ktor.http.content.static
+import io.ktor.request.receive
+import io.ktor.response.respond
+import io.ktor.routing.Routing
+import io.ktor.routing.get
+import io.ktor.routing.post
+import io.ktor.routing.route
+import kotlin.random.Random
+
+private fun makeMusicApiRequest(s: String): String? {
+    val url = "https://api.musixmatch.com/ws/1.1/$s&apikey=67053f507ef88fc99c544f4d7052dfa8"
+    return makeAPIRequest(url)
+}
+
+data class TrackInfo(val name: String, val id: Number)
+data class QuizQuestions(val question: String, val choices: Array<String>, val correctAnswer: String) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as QuizQuestions
+
+        if (question != other.question) return false
+        if (!choices.contentEquals(other.choices)) return false
+        if (correctAnswer != other.correctAnswer) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = question.hashCode()
+        result = 31 * result + choices.contentHashCode()
+        result = 31 * result + correctAnswer.hashCode()
+        return result
+    }
+}
+
+data class MusicUserInfo(val name: String, val artist: String, val score: String)
+
+fun <T> MutableList<T>.randomRemove(): T {
+    return removeAt(Random.nextInt(0, size))
+}
+
+fun Routing.musicGameApi() {
+    val highScores = mutableMapOf<String, MutableList<MusicUserInfo>>()//.apply { withDefault { mutableListOf() } }
+
+    route("/music") {
+        get("/music_get_quiz_from={artist}.json") {
+            val s = "track.search?q_artist=${call.parameters["artist"]!!}&page_size=100&page=1&f_has_lyrics=1"
+            val j = makeMusicApiRequest(s)
+            try {
+                val q = Gson().fromJson<MusicBase>(j, MusicBase::class.java)
+                val list = q.message?.body?.track_list?.map {
+                    TrackInfo(
+                        it.track!!.track_name!!,
+                        it.track.track_id!!
+                    )
+                }!!.shuffled().toMutableList()
+                val qList = mutableListOf<QuizQuestions>()
+                while (list.size > 4) {
+                    val track = list.randomRemove()
+                    val snip = "track.snippet.get?track_id=${track.id}"
+                    val snipId = makeMusicApiRequest(snip)
+                    try {
+                        val snippetQuiz = Gson().fromJson<SnippetBase>(snipId, SnippetBase::class.java)
+                        val text = snippetQuiz.message?.body?.snippet?.snippet_body
+                        val quizQuestions = QuizQuestions(
+                            text!!,
+                            arrayOf(
+                                track.name,
+                                list.randomRemove().name,
+                                list.randomRemove().name,
+                                list.randomRemove().name
+                            ),
+                            track.name
+                        )
+                        qList += quizQuestions
+                    } catch (e: Exception) {
+
+                    }
+                }
+                call.respond(qList)
+            } catch (e: Exception) {
+                prettyLog(j)
+                call.respond(j.toString())
+            }
+        }
+        get("/highScores.json") {
+            call.respond(highScores)
+        }
+        post("/") {
+            val info = call.receive<MusicUserInfo>()
+            prettyLog(info)
+            if(!highScores.containsKey(info.artist)) {
+                highScores[info.artist] = mutableListOf()
+            }
+            highScores[info.artist]!!.add(info)
+            call.respond(mapOf("submitted" to true))
+        }
+        static {
+            // This marks index.html from the 'web' folder in resources as the default file to serve.
+            defaultResource("musicgame.html", "web")
+            // This serves files from the 'web' folder in the application resources.
+            resources("web")
+        }
+    }
+}
+
 data class MusicBase(val message: Message?)
 
 data class Body(val track_list: List<Track_list615124581>?)
