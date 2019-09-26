@@ -208,7 +208,6 @@
                     const scoreList = document.createElement("dl");
                     scoreList.id = "highList";
                     for (let key in json) {
-                        console.log(key);
                         let item = document.createElement("dt");
                         item.innerText = key;
                         scoreList.appendChild(item);
@@ -262,11 +261,10 @@
                     setTimeout(function () {
                         if (text) {
                             $('#highScoreModal').modal('hide');
+                            highScoreListSetup();
                         }
                         $.LoadingOverlay("hide");
                     }, 2000);
-                    console.log(json);
-                    highScoreListSetup();
                 }
             });
         }
