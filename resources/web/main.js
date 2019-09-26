@@ -595,7 +595,7 @@ function start() {
     };
 
     inputElement.onkeyup = function(e) {
-        onSendTyping();
+        //onSendTyping();
     };
 
     document.getElementById("commandInput").onkeypress = function (e) {

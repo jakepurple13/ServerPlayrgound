@@ -42,6 +42,8 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
 import kotlinx.html.*
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.text.SimpleDateFormat
@@ -172,6 +174,7 @@ private fun Application.routing(db: Database, simpleJwt: SimpleJWT) {
 
         chatRoute()
         api(db)
+        musicGameApi()
 
         route("/nsi/{name}") {
             get {
@@ -575,6 +578,59 @@ fun Route.randomShow(db: Database) {
         }
         call.respond(showInfo)
     }
+}
+
+private fun makeMusicApiRequest(s: String): String? {
+    val url = "https://api.musixmatch.com/ws/1.1/$s&apikey=67053f507ef88fc99c544f4d7052dfa8"
+    return makeAPIRequest(url)
+}
+
+data class TrackInfo(val name: String, val id: Number)
+
+fun Routing.musicGameApi() {
+    route("/music") {
+        get("/music_from={artist}.json") {
+            val s = "track.search?q_artist=${call.parameters["artist"]!!}&page_size=100&page=1&f_has_lyrics=1"
+            val j = makeMusicApiRequest(s)
+            try {
+                val q = Gson().fromJson<MusicBase>(j, MusicBase::class.java)
+                val list =
+                    q.message?.body?.track_list?.map { TrackInfo(it.track!!.track_name!!, it.track.track_id!!) }!!
+                call.respond(list)
+            } catch (e: Exception) {
+                prettyLog(j)
+                call.respond(j.toString())
+            }
+        }
+        get("/music={id}.json") {
+            val id = call.parameters["id"]!!
+            val s = "track.snippet.get?track_id=$id"
+            val j = makeMusicApiRequest(s)
+            try {
+                val q = Gson().fromJson<SnippetBase>(j, SnippetBase::class.java)
+                val text = q.message?.body?.snippet?.snippet_body
+                call.respond(mapOf("snippet" to text))
+            } catch (e: Exception) {
+                prettyLog(j)
+                call.respond(j.toString())
+            }
+        }
+        static {
+            // This marks index.html from the 'web' folder in resources as the default file to serve.
+            defaultResource("musicgame.html", "web")
+            // This serves files from the 'web' folder in the application resources.
+            resources("web")
+        }
+    }
+}
+
+private fun makeAPIRequest(url: String): String? {
+    val client = OkHttpClient();
+    val request = Request.Builder()
+        .url(url)
+        .build()
+
+    client.newCall(request).execute().use { response -> return response.body?.string() }
 }
 
 data class PostSnippet(val snippet: PostSnippet.Text) {
