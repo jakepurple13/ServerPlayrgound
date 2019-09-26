@@ -65,6 +65,22 @@
             color: black;
         }
 
+        dd {
+            display: block;
+            margin-left: 40px;
+            color: #aaaaaa;
+        }
+
+        dt {
+            display: block;
+            color: #aaaaaa;
+        }
+
+        dl {
+            display: block;
+            margin: 1em 0;
+        }
+
         #container {
             width: 75%;
             margin: auto;
@@ -89,7 +105,6 @@
 
         #start {
             display: none;
-            width: 90px;
         }
     </style>
     <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Open Sans"/>
@@ -112,12 +127,14 @@
     <button class='' id='start'> Start Over</a></button> -->
 </div>
 
+<div id="highScoreList"></div>
+
 <div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
      aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
+                <h5 class="modal-title" id="exampleModalLabel">Choose an Artist</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
@@ -139,6 +156,35 @@
     </div>
 </div>
 
+<div class="modal fade" id="highScoreModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="highScoreLabel">Score</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <span class="input-group-text" id="scoreArtist"></span>
+                <span class="input-group-text" id="scoreScore"></span>
+                <div class="input-group input-group-sm mb-3">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text" id="scoreName">Enter Name</span>
+                    </div>
+                    <input type="text" id="highScoreName" class="form-control" aria-label="Small"
+                           aria-describedby="inputGroup-sizing-sm">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="noSubmit" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="submitScore">Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://code.jquery.com/jquery-3.3.1.min.js"
         integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
 <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
@@ -146,66 +192,112 @@
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
         integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
         crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/gasparesganga-jquery-loading-overlay@2.1.6/dist/loadingoverlay.min.js"></script>
 <!--<script type="text/javascript" src='questions.json'></script>-->
 <script type='text/javascript'>
-    function shuffle(array) {
-        return array.sort(() => Math.random() - 0.5);
-    }
-
     (function () {
-        function getQuestions(artistName) {
-            return JSON.parse($.ajax({
-                url: '/music/music_from=' + artistName + '.json',
+
+        function highScoreListSetup() {
+            $.ajax({
+                url: '/music/highScores.json',
                 type: "GET",
-                async: false,
+                dataType: "json",
                 success: function (json) {
-                    return json;
+                    console.log(json);
+                    $("#highList").remove();
+                    const scoreList = document.createElement("dl");
+                    scoreList.id = "highList";
+                    for (let key in json) {
+                        console.log(key);
+                        let item = document.createElement("dt");
+                        item.innerText = key;
+                        scoreList.appendChild(item);
+                        for (let value in json[key]) {
+                            let user = json[key][value];
+                            console.log(user);
+                            let input = document.createElement("dd");
+                            input.innerText = user.name + " | " + user.score;
+                            scoreList.appendChild(input);
+                        }
+                    }
+                    $("#highScoreList").append(scoreList);
                 }
-            }).responseText);
+            });
         }
 
-        function getSnippet(json) {
-            return JSON.parse($.ajax({
-                url: '/music/music=' + json.id + '.json',
-                type: "GET",
-                async: false,
-                success: function (snippet) {
-                    return snippet;
+        highScoreListSetup();
+
+        function submitHighScore() {
+            $("#highScoreModal").LoadingOverlay("show", {
+                image: "",
+                text: "Submitting..."
+            });
+            $.ajax({
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                url: '/music',
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify({
+                    name: $('#highScoreName').val(),
+                    artist: $('#artist_choice').val(),
+                    score: correct + "/" + questions.length
+                }),
+                success: function (json) {
+                    let hsm = $("#highScoreModal");
+                    hsm.LoadingOverlay("hide");
+                    let text = json.submitted;
+                    let displayText = "";
+                    if (text) {
+                        displayText = "Submitted Successful";
+                    } else {
+                        displayText = "Submitted Failed";
+                    }
+                    $.LoadingOverlay("show", {
+                        image: "",
+                        text: displayText
+                    });
+                    setTimeout(function () {
+                        if (text) {
+                            $('#highScoreModal').modal('hide');
+                        }
+                        $.LoadingOverlay("hide");
+                    }, 2000);
+                    console.log(json);
+                    highScoreListSetup();
                 }
-            }).responseText);
+            });
         }
 
-        function setUpQuestions() {
-            let qs = shuffle(getQuestions($('#artist_choice').val()));
-            let qList = [];
-            while (qs.length >= 4) {
-                let q = qs.pop();
-                let quest = getSnippet(q).snippet;
-                let q1 = "";
-                if (quest) {
-                    q1 = quest;
-                } else {
-                    q1 = "Sorry, something went wrong. Freebie point! <br />" + q.name;
-                }
-                qList.push({
-                    question: q1,
-                    choices: shuffle([q.name, qs.pop().name, qs.pop().name, qs.pop().name]),
-                    correctAnswer: q.name
-                });
-            }
-            return qList;
+        function scoreModalSetup() {
+            document.getElementById("scoreScore").innerText = correct + "/" + questions.length;
+            document.getElementById("scoreArtist").innerText = $('#artist_choice').val();
         }
 
         let questions;
 
         let questionCounter = 0; //Tracks question number
         let selections = []; //Array containing user choices
+        let correct = 0;
         const quiz = $("#quiz"); //Quiz div object
 
         function startGame() {
-            questions = setUpQuestions();
-            // Display initial question
-            displayNext();
+            $("#container").LoadingOverlay("show", {
+                background: "#B0E0E6"
+            });
+            $.ajax({
+                url: '/music/music_get_quiz_from=' + $('#artist_choice').val() + '.json',
+                type: "GET",
+                dataType: "json",
+                success: function (json) {
+                    $("#container").LoadingOverlay("hide");
+                    questions = json;
+                    // Display initial question
+                    displayNext();
+                }
+            });
         }
 
         function closeGame() {
@@ -215,6 +307,7 @@
         $('#exampleModal').modal('show');
         document.getElementById("startGame").onclick = startGame;
         document.getElementById("closeGame").onclick = closeGame;
+        document.getElementById("submitScore").onclick = submitHighScore;
 
         // Click handler for the 'next' button
         $("#next").on("click", function (e) {
@@ -256,6 +349,7 @@
             }
             questionCounter = 0;
             selections = [];
+            correct = 0;
             //displayNext();
             $("#start").hide();
         });
@@ -337,6 +431,8 @@
                     $("#next").hide();
                     $("#prev").hide();
                     $("#start").show();
+                    scoreModalSetup();
+                    $('#highScoreModal').modal('show');
                 }
             });
         }
@@ -356,7 +452,7 @@
             for (let i = 0; i < selections.length; i++) {
                 aAndQ += 'Your Pick: ' + questions[i].choices[selections[i]] + ' | Correct Answer: ' + questions[i].correctAnswer + "<br /><br />"
             }
-
+            correct = numCorrect;
             score.append(
                 "You got " +
                 numCorrect +

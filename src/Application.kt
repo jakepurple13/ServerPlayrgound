@@ -50,6 +50,7 @@ import java.text.SimpleDateFormat
 import java.time.Duration
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.random.Random
 import kotlin.system.measureTimeMillis
 
 fun main(args: Array<String>): Unit {
@@ -586,34 +587,89 @@ private fun makeMusicApiRequest(s: String): String? {
 }
 
 data class TrackInfo(val name: String, val id: Number)
+data class QuizQuestions(val question: String, val choices: Array<String>, val correctAnswer: String) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as QuizQuestions
+
+        if (question != other.question) return false
+        if (!choices.contentEquals(other.choices)) return false
+        if (correctAnswer != other.correctAnswer) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = question.hashCode()
+        result = 31 * result + choices.contentHashCode()
+        result = 31 * result + correctAnswer.hashCode()
+        return result
+    }
+}
+
+data class MusicUserInfo(val name: String, val artist: String, val score: String)
+
+fun <T> MutableList<T>.randomRemove(): T {
+    return removeAt(Random.nextInt(0, size))
+}
 
 fun Routing.musicGameApi() {
+    val highScores = mutableMapOf<String, MutableList<MusicUserInfo>>()//.apply { withDefault { mutableListOf() } }
+
     route("/music") {
-        get("/music_from={artist}.json") {
+        get("/music_get_quiz_from={artist}.json") {
             val s = "track.search?q_artist=${call.parameters["artist"]!!}&page_size=100&page=1&f_has_lyrics=1"
             val j = makeMusicApiRequest(s)
             try {
                 val q = Gson().fromJson<MusicBase>(j, MusicBase::class.java)
-                val list =
-                    q.message?.body?.track_list?.map { TrackInfo(it.track!!.track_name!!, it.track.track_id!!) }!!
-                call.respond(list)
+                val list = q.message?.body?.track_list?.map {
+                    TrackInfo(
+                        it.track!!.track_name!!,
+                        it.track.track_id!!
+                    )
+                }!!.shuffled().toMutableList()
+                val qList = mutableListOf<QuizQuestions>()
+                while (list.size > 4) {
+                    val track = list.randomRemove()
+                    val snip = "track.snippet.get?track_id=${track.id}"
+                    val snipId = makeMusicApiRequest(snip)
+                    try {
+                        val snippetQuiz = Gson().fromJson<SnippetBase>(snipId, SnippetBase::class.java)
+                        val text = snippetQuiz.message?.body?.snippet?.snippet_body
+                        val quizQuestions = QuizQuestions(
+                            text!!,
+                            arrayOf(
+                                track.name,
+                                list.randomRemove().name,
+                                list.randomRemove().name,
+                                list.randomRemove().name
+                            ),
+                            track.name
+                        )
+                        qList += quizQuestions
+                    } catch (e: Exception) {
+
+                    }
+                }
+                call.respond(qList)
             } catch (e: Exception) {
                 prettyLog(j)
                 call.respond(j.toString())
             }
         }
-        get("/music={id}.json") {
-            val id = call.parameters["id"]!!
-            val s = "track.snippet.get?track_id=$id"
-            val j = makeMusicApiRequest(s)
-            try {
-                val q = Gson().fromJson<SnippetBase>(j, SnippetBase::class.java)
-                val text = q.message?.body?.snippet?.snippet_body
-                call.respond(mapOf("snippet" to text))
-            } catch (e: Exception) {
-                prettyLog(j)
-                call.respond(j.toString())
+        get("/highScores.json") {
+            call.respond(highScores)
+        }
+        post("/") {
+            val info = call.receive<MusicUserInfo>()
+            prettyLog(info)
+            if(!highScores.containsKey(info.artist)) {
+                highScores[info.artist] = mutableListOf()
             }
+            highScores[info.artist]!!.add(info)
+            call.respond(mapOf("submitted" to true))
         }
         static {
             // This marks index.html from the 'web' folder in resources as the default file to serve.
