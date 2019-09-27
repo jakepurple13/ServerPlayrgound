@@ -87,9 +87,12 @@ data class Profile(val username: String?, val image: String?)
 
 enum class ChatCommands(val command: String, val helpText: String = "") {
     DYK("/dyk", "Prints a random Did You Know fact."), WHO("/who", "Shows who's on the server."),
-    SHOW("/show ", "Displays info about a show from the database. If you type @ first, you can autocomplete a show."),
+    SHOW(
+        "/show ",
+        "Displays info about a show from the database. If you type @ first, you can autocomplete a show. [@ only works on web]"
+    ),
     HELP("/help", "Shows this message."), PRIVATE_MESSAGE("/pm ", "Private message someone"),
-    ACTION("/me", "Show an action. It will be in all italics.")
+    ACTION("/me", "Show an action. It will be in all italics."), JOKE("/dailyjoke", "Prints a daily joke")
 }
 
 /**
@@ -124,6 +127,7 @@ private suspend fun receivedMessage(id: String, command: String) {
         prettyLog(command)
         when {
             command.startsWith(ChatCommands.DYK.command) -> server.didYouKnow()
+            command.startsWith(ChatCommands.JOKE.command) -> server.joke(id)
             // The command `who` responds the user about all the member names connected to the user.
             command.startsWith(ChatCommands.WHO.command) -> server.who(id)
             command.startsWith(ChatCommands.SHOW.command) -> {

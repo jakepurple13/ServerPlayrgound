@@ -8,11 +8,8 @@ import io.ktor.http.cio.websocket.close
 import kotlinx.coroutines.channels.ClosedSendChannelException
 import kotlinx.html.*
 import kotlinx.html.stream.createHTML
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.transactions.transaction
-import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -237,21 +234,21 @@ class ChatServer {
         val permalink: String
     )
 
-    @Throws(IOException::class)
-    private fun run(url: String): String? {
-        val client = OkHttpClient();
-        val request = Request.Builder()
-            .url(url)
-            .build()
-
-        client.newCall(request).execute().use { response -> return response.body?.string() }
-    }
-
     suspend fun didYouKnow() {
         val url = "https://uselessfacts.jsph.pl/random.json?language=en"
-        val d = Gson().fromJson(run(url), DidYouKnowFact::class.java)
-        prettyLog(d)
+        val d = Gson().fromJson(makeAPIRequest(url), DidYouKnowFact::class.java)
         broadcast("Server", d.text, MessageType.MESSAGE)
+    }
+
+    suspend fun joke(sender: String) {
+        val j = getJoke()
+        if (j != null) {
+            broadcast("Server", "${j.title}\n${j.text}", MessageType.MESSAGE)
+        } else {
+            val sendMessage =
+                SendMessage(ChatUser("Server"), "Something went wrong getting the joke", MessageType.SERVER)
+            members[sender]?.send(Frame.Text(sendMessage.toJson()))
+        }
     }
 
     enum class MessageType {

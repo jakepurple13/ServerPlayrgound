@@ -2,8 +2,17 @@ package com.example
 
 import io.ktor.html.HtmlContent
 import io.ktor.http.HttpStatusCode
+import kotlinx.coroutines.runBlocking
 import kotlinx.html.*
 import kotlinx.html.stream.createHTML
+import kotlin.collections.MutableList
+import kotlin.collections.forEach
+import kotlin.collections.listOf
+import kotlin.collections.mutableListOf
+import kotlin.collections.mutableMapOf
+import kotlin.collections.plus
+import kotlin.collections.random
+import kotlin.collections.set
 import kotlin.test.Test
 
 class ApplicationTest {
@@ -17,6 +26,14 @@ class ApplicationTest {
         randomEnum<ChatServer.MessageType>().apply { prettyLog(this) }
         ChatServer.MessageType.values().random().apply { prettyLog(this) }
         ChatServer.MessageType::class.random().apply { prettyLog(this) }
+    }
+
+    @Test
+    fun jokeTest() {
+        System.setProperty("https.protocols", "TLSv1.2,TLSv1.1,SSLv3")
+        runBlocking {
+
+        }
     }
 
     @Test

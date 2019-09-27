@@ -5,6 +5,7 @@ package com.example
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import com.fasterxml.jackson.databind.SerializationFeature
+import com.google.gson.Gson
 import freemarker.cache.ClassTemplateLoader
 import io.ktor.application.*
 import io.ktor.auth.Authentication
@@ -364,6 +365,19 @@ fun makeAPIRequest(url: String): String? {
         .build()
 
     client.newCall(request).execute().use { response -> return response.body?.string() }
+}
+
+inline fun <reified T> getAPIRequest(url: String): T? {
+    val client = OkHttpClient();
+    val request = Request.Builder()
+        .url(url)
+        .build()
+
+    client.newCall(request).execute().use { response ->
+        return response.body?.string()?.let {
+            Gson().fromJson(it, T::class.java)
+        }
+    }
 }
 
 data class PostSnippet(val snippet: PostSnippet.Text) {
