@@ -1,7 +1,10 @@
 package com.example
 
 import com.google.gson.Gson
-import io.ktor.http.cio.websocket.*
+import io.ktor.http.cio.websocket.CloseReason
+import io.ktor.http.cio.websocket.Frame
+import io.ktor.http.cio.websocket.close
+import io.ktor.http.cio.websocket.readText
 import io.ktor.http.content.defaultResource
 import io.ktor.http.content.resources
 import io.ktor.http.content.static
@@ -11,12 +14,10 @@ import io.ktor.sessions.get
 import io.ktor.sessions.sessions
 import io.ktor.websocket.webSocket
 import kotlinx.coroutines.channels.consumeEach
-import java.util.*
-import java.util.concurrent.atomic.AtomicInteger
 
 fun Route.chatRoute() {
     route("/chat") {
-        val clients = Collections.synchronizedSet(LinkedHashSet<ChatClient>())
+        //val clients = Collections.synchronizedSet(LinkedHashSet<ChatClient>())
 
         webSocket("/ws") {
             // this: WebSocketSession ->
@@ -64,14 +65,14 @@ fun Route.chatRoute() {
     }
 }
 
-class ChatClient(val session: DefaultWebSocketSession) {
+/*class ChatClient(val session: DefaultWebSocketSession) {
     companion object {
         var lastId = AtomicInteger(0)
     }
 
     val id = lastId.getAndIncrement()
     val name = "user$id"
-}
+}*/
 
 val server = ChatServer()
 
@@ -93,7 +94,8 @@ enum class ChatCommands(val command: String, val helpText: String = "") {
     ),
     HELP("/help", "Shows this message."), PRIVATE_MESSAGE("/pm ", "Private message someone"),
     ACTION("/me", "Show an action. It will be in all italics."), JOKE("/dailyjoke", "Prints a daily joke"),
-    CHUCK_NORRIS("/chucknorris", "Display a Chuck Norris Fact"), EVIL_INSULT("/insult", "Display an evil insult")
+    CHUCK_NORRIS("/chucknorris", "Display a Chuck Norris Fact"), EVIL_INSULT("/insult", "Display an evil insult"),
+    COIN_FLIP("/flip", "Flip a coin")
 }
 
 /**
@@ -131,6 +133,7 @@ private suspend fun receivedMessage(id: String, command: String) {
             command.startsWith(ChatCommands.JOKE.command) -> server.joke(id)
             command.startsWith(ChatCommands.CHUCK_NORRIS.command) -> server.ChuckNorris(id)
             command.startsWith(ChatCommands.EVIL_INSULT.command) -> server.getEvilInsult(id)
+            command.startsWith(ChatCommands.COIN_FLIP.command) -> server.flipCoin(id)
             // The command `who` responds the user about all the member names connected to the user.
             command.startsWith(ChatCommands.WHO.command) -> server.who(id)
             command.startsWith(ChatCommands.SHOW.command) -> {

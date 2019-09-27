@@ -15,6 +15,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.random.Random
 
 
 class ChatUser(var name: String, var image: String = "https://www.w3schools.com/w3images/bandmember.jpg")
@@ -251,6 +252,7 @@ class ChatServer {
         }
     }
 
+    @Suppress("FunctionName")
     suspend fun ChuckNorris(sender: String) {
         val j = getChuckNorris()?.let {
             broadcast("Chuck Norris", it, MessageType.MESSAGE)
@@ -271,6 +273,14 @@ class ChatServer {
                 SendMessage(ChatUser("Server"), "Something went wrong getting the insult", MessageType.SERVER)
             members[sender]?.send(Frame.Text(sendMessage.toJson()))
         }
+    }
+
+    suspend fun flipCoin(sender: String) {
+        broadcast(
+            "Server",
+            "${memberNames[sender]?.name} flipped a coin that landed on ${if (Random.nextBoolean()) "Heads" else "Tails"}",
+            MessageType.MESSAGE
+        )
     }
 
     enum class MessageType {
