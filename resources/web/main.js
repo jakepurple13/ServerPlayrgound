@@ -555,7 +555,7 @@ function previewText() {
 }
 
 function getObjText(text) {
-    return "<pre style='white-space: pre-wrap;word-break: break-all;'>" + parseBBCode(text) + "</pre>";
+    return "<pre style='white-space: pre-wrap;word-break: break-all;'>" + parseBBCode($("<div/>").html(text).text()) + "</pre>";
     //return parseBBCode(text);
 }
 
@@ -594,7 +594,7 @@ function start() {
         }
     };
 
-    inputElement.onkeyup = function(e) {
+    inputElement.onkeyup = function (e) {
         //onSendTyping();
     };
 
