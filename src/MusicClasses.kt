@@ -90,25 +90,6 @@ fun Routing.musicGameApi() {
         }
         get("/highScores.json") {
             //call.respond(highScores)
-            /*val html = createHTML(true, xhtmlCompatible = true)
-                .dl {
-                    id = "highList"
-                    highScores.keys.forEach { info ->
-                        dt {
-                            unsafe {
-                                +info
-                            }
-                        }
-                        highScores[info]!!.forEach {
-                            dd {
-                                unsafe {
-                                    +"${it.name} | ${it.score}"
-                                }
-                            }
-                        }
-                    }
-                }*/
-
             val html = createHTML(true, xhtmlCompatible = true)
                 .table {
                     id = "highList"
