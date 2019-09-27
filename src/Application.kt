@@ -48,14 +48,19 @@ import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.substring
 import org.jetbrains.exposed.sql.transactions.transaction
+import java.io.File
 import java.text.SimpleDateFormat
 import java.time.Duration
 import java.util.*
+import java.util.concurrent.TimeUnit
 import kotlin.system.measureTimeMillis
 
 fun main(args: Array<String>): Unit {
-    embeddedServer(Netty, port = 8080, module = Application::module).start(wait = true)
-    //io.ktor.server.netty.EngineMain.main(args)
+    val server = embeddedServer(Netty, port = 8080, module = Application::module).start(wait = false)
+    Runtime.getRuntime().addShutdownHook(Thread {
+        server.stop(1, 5, TimeUnit.SECONDS)
+    })
+    Thread.currentThread().join()
 }
 
 fun Application.module() {
@@ -64,12 +69,12 @@ fun Application.module() {
 
     val simpleJwt = SimpleJWT("my-super-secret-for-jwt")
 
-    database(db)
+    val highScoreFile = File("resources/database/highscores.json")
 
+    monitoring(highScoreFile)
     installing(simpleJwt)
-
+    database(db)
     routing(db, simpleJwt)
-
 }
 
 private fun Application.database(db: Database) {
@@ -100,6 +105,26 @@ private fun Application.database(db: Database) {
             //updateShows(db)
         }
     }*/
+}
+
+private fun Application.monitoring(highScoreFile: File) {
+    environment.monitor.subscribe(ApplicationStarting) {
+        println("Starting")
+    }
+    environment.monitor.subscribe(ApplicationStarted) {
+        println("Started")
+        musicHighScoreSetup(highScoreFile)
+    }
+    environment.monitor.subscribe(ApplicationStopPreparing) {
+        println("Stop Preparing")
+        musicHighScoreSave(highScoreFile)
+    }
+    environment.monitor.subscribe(ApplicationStopping) {
+        println("Stopping")
+    }
+    environment.monitor.subscribe(ApplicationStopped) {
+        println("Stopped")
+    }
 }
 
 private fun Application.installing(simpleJwt: SimpleJWT) {

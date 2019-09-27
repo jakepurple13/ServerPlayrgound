@@ -17,9 +17,38 @@ class ApplicationTest {
         randomEnum<ChatServer.MessageType>().apply { prettyLog(this) }
         ChatServer.MessageType.values().random().apply { prettyLog(this) }
         ChatServer.MessageType::class.random().apply { prettyLog(this) }
+    }
 
-
-
+    @Test
+    fun htTest() {
+        val highScores = mutableMapOf<String, MutableList<MusicUserInfo>>()
+        highScores["big blue ball"] = mutableListOf(MusicUserInfo("asdf", "asdf", "asdf"))
+        highScores["jfla"] = mutableListOf(MusicUserInfo("asdf", "asdf", "asdf"))
+        val html = createHTML(true, xhtmlCompatible = true)
+            .table {
+                id = "highList"
+                classes = classes + "darkTable"
+                prettyLog(attributesEntries)
+                highScores.keys.forEach { info ->
+                    tr {
+                        td {
+                            unsafe {
+                                +info
+                            }
+                        }
+                        //}
+                        highScores[info]!!.forEach {
+                            //tr {
+                            td {
+                                unsafe {
+                                    +"${it.name} | ${it.score}"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        prettyLog(html)
     }
 
     @Test

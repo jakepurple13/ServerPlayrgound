@@ -1,5 +1,8 @@
 package com.example
 
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import kotlin.random.Random
 import kotlin.reflect.KClass
 
 fun randomName(): String = listOf(
@@ -13,6 +16,14 @@ fun randomName(): String = listOf(
 inline fun <reified T : Enum<T>> randomEnum() = enumValues<T>().random()
 
 inline fun <reified T : Enum<T>> KClass<T>.random() = enumValues<T>().random()
+
+fun <T> MutableList<T>.randomRemove(): T {
+    return removeAt(Random.nextInt(0, size))
+}
+
+fun Any.toJson(): String = Gson().toJson(this)
+
+fun Any.toPrettyJson(): String = GsonBuilder().setPrettyPrinting().create().toJson(this)
 
 fun prettyLog(msg: Any?) {
     //the main message to be logged

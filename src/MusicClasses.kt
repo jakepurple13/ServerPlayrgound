@@ -1,6 +1,8 @@
 package com.example
 
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import io.ktor.application.Application
 import io.ktor.application.call
 import io.ktor.http.content.defaultResource
 import io.ktor.http.content.resources
@@ -11,7 +13,9 @@ import io.ktor.routing.Routing
 import io.ktor.routing.get
 import io.ktor.routing.post
 import io.ktor.routing.route
-import kotlin.random.Random
+import kotlinx.html.*
+import kotlinx.html.stream.createHTML
+import java.io.File
 
 private fun makeMusicApiRequest(s: String): String? {
     val url = "https://api.musixmatch.com/ws/1.1/$s&apikey=67053f507ef88fc99c544f4d7052dfa8"
@@ -19,37 +23,30 @@ private fun makeMusicApiRequest(s: String): String? {
 }
 
 data class TrackInfo(val name: String, val id: Number)
-data class QuizQuestions(val question: String, val choices: Array<String>, val correctAnswer: String) {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as QuizQuestions
-
-        if (question != other.question) return false
-        if (!choices.contentEquals(other.choices)) return false
-        if (correctAnswer != other.correctAnswer) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        var result = question.hashCode()
-        result = 31 * result + choices.contentHashCode()
-        result = 31 * result + correctAnswer.hashCode()
-        return result
-    }
-}
+data class QuizQuestions(val question: String, val choices: List<String>, val correctAnswer: String)
 
 data class MusicUserInfo(val name: String, val artist: String, val score: String)
 
-fun <T> MutableList<T>.randomRemove(): T {
-    return removeAt(Random.nextInt(0, size))
+fun Application.musicHighScoreSetup(highScoreFile: File) {
+    if (highScoreFile.exists()) {
+        val list = Gson().fromJson<MutableMap<String, MutableList<MusicUserInfo>>>(
+            highScoreFile.readText(),
+            object : TypeToken<MutableMap<String, MutableList<MusicUserInfo>>>() {}.type
+        )
+        highScores.putAll(list)
+    }
 }
 
-fun Routing.musicGameApi() {
-    val highScores = mutableMapOf<String, MutableList<MusicUserInfo>>()//.apply { withDefault { mutableListOf() } }
+fun Application.musicHighScoreSave(highScoreFile: File) {
+    if (!highScoreFile.exists()) {
+        highScoreFile.createNewFile()
+    }
+    highScoreFile.writeText(highScores.toPrettyJson())
+}
 
+val highScores = mutableMapOf<String, MutableList<MusicUserInfo>>()
+
+fun Routing.musicGameApi() {
     route("/music") {
         get("/music_get_quiz_from={artist}.json") {
             val s = "track.search?q_artist=${call.parameters["artist"]!!}&page_size=100&page=1&f_has_lyrics=1"
@@ -72,7 +69,7 @@ fun Routing.musicGameApi() {
                         val text = snippetQuiz.message?.body?.snippet?.snippet_body
                         val quizQuestions = QuizQuestions(
                             text!!,
-                            arrayOf(
+                            listOf(
                                 track.name,
                                 list.randomRemove().name,
                                 list.randomRemove().name,
@@ -92,7 +89,7 @@ fun Routing.musicGameApi() {
             }
         }
         get("/highScores.json") {
-            call.respond(highScores)
+            //call.respond(highScores)
             /*val html = createHTML(true, xhtmlCompatible = true)
                 .dl {
                     id = "highList"
@@ -110,8 +107,30 @@ fun Routing.musicGameApi() {
                             }
                         }
                     }
+                }*/
+
+            val html = createHTML(true, xhtmlCompatible = true)
+                .table {
+                    id = "highList"
+                    classes = classes + "darkTable"
+                    highScores.keys.forEach { info ->
+                        tr {
+                            td {
+                                unsafe {
+                                    +info
+                                }
+                            }
+                            highScores[info]!!.forEach {
+                                td {
+                                    unsafe {
+                                        +"${it.name} | ${it.score}"
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
-            call.respond(html)*/
+            call.respond(html)
         }
         post("/") {
             val info = call.receive<MusicUserInfo>()
