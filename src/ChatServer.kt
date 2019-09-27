@@ -251,6 +251,28 @@ class ChatServer {
         }
     }
 
+    suspend fun ChuckNorris(sender: String) {
+        val j = getChuckNorris()?.let {
+            broadcast("Chuck Norris", it, MessageType.MESSAGE)
+        }
+        if (j == null) {
+            val sendMessage =
+                SendMessage(ChatUser("Server"), "Chuck Norris did not want to come", MessageType.SERVER)
+            members[sender]?.send(Frame.Text(sendMessage.toJson()))
+        }
+    }
+
+    suspend fun getEvilInsult(sender: String) {
+        val j = getEvilInsult()?.let {
+            broadcast("EvilInsult", it, MessageType.MESSAGE)
+        }
+        if (j == null) {
+            val sendMessage =
+                SendMessage(ChatUser("Server"), "Something went wrong getting the insult", MessageType.SERVER)
+            members[sender]?.send(Frame.Text(sendMessage.toJson()))
+        }
+    }
+
     enum class MessageType {
         MESSAGE, EPISODE, SERVER, INFO, TYPING_INDICATOR, DOWNLOADING
     }

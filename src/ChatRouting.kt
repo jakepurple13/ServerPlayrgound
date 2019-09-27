@@ -92,7 +92,8 @@ enum class ChatCommands(val command: String, val helpText: String = "") {
         "Displays info about a show from the database. If you type @ first, you can autocomplete a show. [@ only works on web]"
     ),
     HELP("/help", "Shows this message."), PRIVATE_MESSAGE("/pm ", "Private message someone"),
-    ACTION("/me", "Show an action. It will be in all italics."), JOKE("/dailyjoke", "Prints a daily joke")
+    ACTION("/me", "Show an action. It will be in all italics."), JOKE("/dailyjoke", "Prints a daily joke"),
+    CHUCK_NORRIS("/chucknorris", "Display a Chuck Norris Fact"), EVIL_INSULT("/insult", "Display an evil insult")
 }
 
 /**
@@ -128,6 +129,8 @@ private suspend fun receivedMessage(id: String, command: String) {
         when {
             command.startsWith(ChatCommands.DYK.command) -> server.didYouKnow()
             command.startsWith(ChatCommands.JOKE.command) -> server.joke(id)
+            command.startsWith(ChatCommands.CHUCK_NORRIS.command) -> server.ChuckNorris(id)
+            command.startsWith(ChatCommands.EVIL_INSULT.command) -> server.getEvilInsult(id)
             // The command `who` responds the user about all the member names connected to the user.
             command.startsWith(ChatCommands.WHO.command) -> server.who(id)
             command.startsWith(ChatCommands.SHOW.command) -> {
