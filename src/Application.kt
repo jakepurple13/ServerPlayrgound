@@ -248,7 +248,12 @@ private fun Application.routing(db: Database, simpleJwt: SimpleJWT) {
             get {
                 val starting = "Running at ${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())}"
                 prettyLog(starting)
-                val time = measureTimeMillis { /*updateShows(db).join()*/ }
+                val time = measureTimeMillis {
+                    createEverything(
+                        db,
+                        ShowApi(Source.RECENT_CARTOON).showInfoList
+                    ).join()/*updateShows(db).join()*/
+                }
                 val finished =
                     "Finished after $time at ${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())}"
                 prettyLog(starting + "\n" + finished)
