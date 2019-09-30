@@ -66,7 +66,7 @@ fun main(args: Array<String>): Unit {
 
 fun Application.module() {
     System.setProperty("https.protocols", "TLSv1.2,TLSv1.1,SSLv3")
-    prettyLog("${System.getenv("JDBC_DATABASE_URL")} and ${System.getenv("KTOR_ENV")}")
+    //prettyLog("${System.getenv("JDBC_DATABASE_URL")} and ${System.getenv("KTOR_ENV")}")
 
     val db = DbSettings.db
 

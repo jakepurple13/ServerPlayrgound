@@ -19,13 +19,13 @@ private const val dbPath = "resources/database/data17.db"
 
 object DbSettings {
     val db by lazy {
-        when {
+        /*when {
             isDev -> Database.connect("jdbc:sqlite:$dbPath", "org.sqlite.JDBC")
             isProd -> Database.connect(System.getenv("JDBC_DATABASE_URL"), driver = "org.postgresql.Driver")
             else -> Database.connect("jdbc:sqlite:$dbPath", "org.sqlite.JDBC")
-        }
+        }*/
         //Database.connect(System.getenv("JDBC_DATABASE_URL"), driver = "org.postgresql.Driver")
-        //Database.connect("jdbc:sqlite:$dbPath", "org.sqlite.JDBC")
+        Database.connect("jdbc:sqlite:$dbPath", "org.sqlite.JDBC")
     }
 }
 
