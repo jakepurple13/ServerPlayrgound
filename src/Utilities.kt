@@ -25,6 +25,10 @@ fun Any.toJson(): String = Gson().toJson(this)
 
 fun Any.toPrettyJson(): String = GsonBuilder().setPrettyPrinting().create().toJson(this)
 
+val envKind get() = System.getenv("KTOR_ENV")
+val isDev get() = envKind == "dev"
+val isProd get() = envKind != "dev"
+
 fun prettyLog(msg: Any?) {
     //the main message to be logged
     var logged = msg.toString()

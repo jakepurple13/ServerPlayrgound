@@ -19,18 +19,13 @@ private const val dbPath = "resources/database/data17.db"
 
 object DbSettings {
     val db by lazy {
-        //prettyLog(System.getenv("JDBC_DATABASE_URL"))
-        //Database.connect("jdbc:h2:mem:regular;DB_CLOSE_DELAY=-1;", "org.h2.Driver")
-        //Database.connect("jdbc:sqlite:/Users/jrein/Downloads/kotlin-examples-master/tutorials/mpp-iOS-Android/servertesting/resources/database/data.db", "org.sqlite.JDBC")
-        /*Database.connect(
-            "jdbc:h2:~/resources/database/seert.db",
-            "org.h2.Driver"
-        )*/
-
-        //Database.connect("jdbc:h2:$dbPath", "org.h2.Driver")
-        Database.connect(System.getenv("JDBC_DATABASE_URL"), driver = "org.postgresql.Driver")
+        when {
+            isDev -> Database.connect("jdbc:sqlite:$dbPath", "org.sqlite.JDBC")
+            isProd -> Database.connect(System.getenv("JDBC_DATABASE_URL"), driver = "org.postgresql.Driver")
+            else -> Database.connect("jdbc:sqlite:$dbPath", "org.sqlite.JDBC")
+        }
+        //Database.connect(System.getenv("JDBC_DATABASE_URL"), driver = "org.postgresql.Driver")
         //Database.connect("jdbc:sqlite:$dbPath", "org.sqlite.JDBC")
-        //Database.connect(System.getenv("JDBC_DATABASE_URL"), driver = "com.mysql.jdbc.Driver")
     }
 }
 

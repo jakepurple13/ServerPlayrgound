@@ -65,7 +65,9 @@ fun main(args: Array<String>): Unit {
 }
 
 fun Application.module() {
-    System.setProperty("https.protocols", "TLSv1.2,TLSv1.1,SSLv3");
+    System.setProperty("https.protocols", "TLSv1.2,TLSv1.1,SSLv3")
+    prettyLog("${System.getenv("JDBC_DATABASE_URL")} and ${System.getenv("KTOR_ENV")}")
+
     val db = DbSettings.db
 
     val simpleJwt = SimpleJWT("my-super-secret-for-jwt")
@@ -249,10 +251,10 @@ private fun Application.routing(db: Database, simpleJwt: SimpleJWT) {
                 val starting = "Running at ${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())}"
                 prettyLog(starting)
                 val time = measureTimeMillis {
-                    createEverything(
+                    /*createEverything(
                         db,
                         ShowApi(Source.RECENT_CARTOON).showInfoList
-                    ).join()/*updateShows(db).join()*/
+                    ).join()*//*updateShows(db).join()*/
                 }
                 val finished =
                     "Finished after $time at ${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())}"
