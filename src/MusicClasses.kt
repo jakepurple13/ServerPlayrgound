@@ -29,11 +29,11 @@ data class MusicUserInfo(val name: String, val artist: String, val score: String
 
 fun Application.musicHighScoreSetup(highScoreFile: File) {
     if (highScoreFile.exists()) {
-        val list = Gson().fromJson<MutableMap<String, MutableList<MusicUserInfo>>>(
+        val list = Gson().fromJson<MutableList<MusicUserInfo>>(
             highScoreFile.readText(),
-            object : TypeToken<MutableMap<String, MutableList<MusicUserInfo>>>() {}.type
+            object : TypeToken<MutableList<MusicUserInfo>>() {}.type
         )
-        highScores.putAll(list)
+        highScores.addAll(list)
     }
 }
 
@@ -44,7 +44,7 @@ fun Application.musicHighScoreSave(highScoreFile: File) {
     highScoreFile.writeText(highScores.toPrettyJson())
 }
 
-val highScores = mutableMapOf<String, MutableList<MusicUserInfo>>()
+val highScores = mutableListOf<MusicUserInfo>()
 
 fun Routing.musicGameApi() {
     route("/music") {
@@ -88,20 +88,31 @@ fun Routing.musicGameApi() {
                 call.respond(j.toString())
             }
         }
+        get("/mobileHighScores.json") {
+            var text = ""
+            val hs = highScores.groupBy { it.artist }
+            hs.keys.forEach { info ->
+                text+=info + "\n"
+                hs[info]?.forEach {
+                    text+="\t${it.name} | ${it.score}\n"
+                }
+            }
+            call.respond(text)
+        }
         get("/highScores.json") {
-            //call.respond(highScores)
+            val hs = highScores.groupBy { it.artist }
             val html = createHTML(true, xhtmlCompatible = true)
                 .table {
                     id = "highList"
                     classes = classes + "darkTable"
-                    highScores.keys.forEach { info ->
+                    hs.keys.forEach { info ->
                         tr {
                             td {
                                 unsafe {
                                     +info
                                 }
                             }
-                            highScores[info]!!.forEach {
+                            hs[info]?.forEach {
                                 td {
                                     unsafe {
                                         +"${it.name} | ${it.score}"
@@ -116,10 +127,7 @@ fun Routing.musicGameApi() {
         post("/") {
             val info = call.receive<MusicUserInfo>()
             prettyLog(info)
-            if (!highScores.containsKey(info.artist)) {
-                highScores[info.artist] = mutableListOf()
-            }
-            highScores[info.artist]!!.add(info)
+            highScores+=info
             call.respond(mapOf("submitted" to true))
         }
         static {

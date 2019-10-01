@@ -525,7 +525,7 @@
 
             let aAndQ = "";
             for (let i = 0; i < selections.length; i++) {
-                aAndQ += 'Your Pick: ' + questions[i].choices[selections[i]] + ' | Correct Answer: ' + questions[i].correctAnswer + "<br /><br />"
+                aAndQ += i + ') Your Pick: ' + questions[i].choices[selections[i]] + ' | Correct Answer: ' + questions[i].correctAnswer + "<br /><br />"
             }
             correct = numCorrect;
             score.append(
