@@ -41,6 +41,7 @@ import io.ktor.util.pipeline.PipelineContext
 import io.ktor.websocket.WebSockets
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.html.body
 import kotlinx.html.p
@@ -92,8 +93,20 @@ fun Application.module() {
 
     monitoring(highScoreFile)
     installing(simpleJwt)
+    timeSave(highScoreFile)
     database(db)
     routing(db, simpleJwt)
+}
+
+private fun Application.timeSave(highScoreFile: File) {
+    GlobalScope.launch {
+        while (true) {
+            //Every 5 minutes save the highscore information
+            delay(300000L)
+            prettyLog("Saving")
+            musicHighScoreSave(highScoreFile)
+        }
+    }
 }
 
 private fun Application.database(db: Database) {

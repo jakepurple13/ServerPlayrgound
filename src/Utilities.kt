@@ -6,6 +6,7 @@ import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.util.pipeline.PipelineContext
 import kotlinx.coroutines.Job
+import java.text.SimpleDateFormat
 import kotlin.random.Random
 import kotlin.reflect.KClass
 import kotlin.system.measureTimeMillis
@@ -80,5 +81,5 @@ fun prettyLog(msg: Any?) {
 
     logged += loc
 
-    println(logged + "\n")
+    println(SimpleDateFormat("MM/dd hh:mm:ss a").format(System.currentTimeMillis())!! + ": " + logged + "\n")
 }
