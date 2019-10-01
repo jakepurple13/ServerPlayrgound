@@ -28,10 +28,13 @@ import io.ktor.http.content.static
 import io.ktor.jackson.jackson
 import io.ktor.request.receive
 import io.ktor.response.respond
+import io.ktor.response.respondRedirect
 import io.ktor.routing.get
 import io.ktor.routing.post
 import io.ktor.routing.route
 import io.ktor.routing.routing
+import io.ktor.server.engine.applicationEngineEnvironment
+import io.ktor.server.engine.connector
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.sessions.*
@@ -39,6 +42,7 @@ import io.ktor.util.generateNonce
 import io.ktor.util.pipeline.PipelineContext
 import io.ktor.websocket.WebSockets
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.html.body
 import kotlinx.html.p
@@ -54,10 +58,25 @@ import java.text.SimpleDateFormat
 import java.time.Duration
 import java.util.*
 import java.util.concurrent.TimeUnit
-import kotlin.system.measureTimeMillis
 
 fun main(args: Array<String>): Unit {
-    val server = embeddedServer(Netty, port = 8080, module = Application::module).start(wait = false)
+    val env = applicationEngineEnvironment {
+        module {
+            module()
+        }
+        // Private API
+        connector {
+            host = "127.0.0.1"
+            port = 9090
+        }
+        // Public API
+        connector {
+            host = "0.0.0.0"
+            port = 8080
+        }
+    }
+    //val server = embeddedServer(Netty, port = 8080, module = Application::module).start(wait = false)
+    val server = embeddedServer(Netty, env).start(wait = false)
     Runtime.getRuntime().addShutdownHook(Thread {
         server.stop(1, 5, TimeUnit.SECONDS)
     })
@@ -246,18 +265,15 @@ private fun Application.routing(db: Database, simpleJwt: SimpleJWT) {
             }
         }
 
-        route("/updateShows") {
-            get {
-                val starting = "Running at ${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())}"
-                prettyLog(starting)
-                val time = measureTimeMillis {
-                    /*createEverything(
-                        db,
-                        ShowApi(Source.RECENT_CARTOON).showInfoList
-                    ).join()*//*updateShows(db).join()*/
+        suspend fun PipelineContext<Unit, ApplicationCall>.getOrUpdateShows(block: () -> Job) {
+            if (isPrivateApi()) {
+                val sf = timeAction {
+                    block()
                 }
+                val starting = "Running at ${SimpleDateFormat("MM/dd hh:mm a").format(sf.first)}"
+                prettyLog(starting)
                 val finished =
-                    "Finished after $time at ${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())}"
+                    "Finished after ${sf.second} at ${SimpleDateFormat("MM/dd hh:mm a").format(System.currentTimeMillis())}"
                 prettyLog(starting + "\n" + finished)
                 call.respondHtml {
                     body {
@@ -266,44 +282,53 @@ private fun Application.routing(db: Database, simpleJwt: SimpleJWT) {
                         }
                     }
                 }
+            } else {
+                notFound("You should not be here")
             }
         }
 
-        route("/shows/{level}") {
+        route("/private") {
+            get("/{action}Shows") {
+                when(call.parameters["action"]!!) {
+                    "update" -> {
+                        getOrUpdateShows {
+                            updateShows(db)
+                        }
+                    }
+                    "get" -> {
+                        getOrUpdateShows {
+                            createEverything(
+                                db,
+                                ShowApi.getSources(
+                                    Source.ANIME,
+                                    Source.DUBBED,
+                                    Source.CARTOON,
+                                    Source.CARTOON_MOVIES,
+                                    Source.LIVE_ACTION
+                                )
+                            )
+                        }
+                    }
+                    else -> {
+                        notFound("Wrong link")
+                    }
+                }
+            }
+        }
+
+        route("/shows") {
             get {
+                call.respondRedirect("/shows/0-9", true)
+            }
+            get("/{level}") {
                 val level = call.parameters["level"]!!
                 val checkLevel = when (level.toLowerCase()) {
                     "0-9" -> ('0'..'9')
-                    "a" -> listOf('a', 'A')
-                    "b" -> listOf('b', 'B')
-                    "c" -> listOf('c', 'C')
-                    "d" -> listOf('d', 'D')
-                    "e" -> listOf('e', 'E')
-                    "f" -> listOf('f', 'F')
-                    "g" -> listOf('g', 'G')
-                    "h" -> listOf('h', 'H')
-                    "i" -> listOf('i', 'I')
-                    "j" -> listOf('j', 'J')
-                    "k" -> listOf('k', 'K')
-                    "l" -> listOf('l', 'L')
-                    "m" -> listOf('m', 'M')
-                    "n" -> listOf('n', 'N')
-                    "o" -> listOf('o', 'O')
-                    "p" -> listOf('p', 'P')
-                    "q" -> listOf('q', 'Q')
-                    "r" -> listOf('r', 'R')
-                    "s" -> listOf('s', 'S')
-                    "t" -> listOf('t', 'T')
-                    "u" -> listOf('u', 'U')
-                    "v" -> listOf('v', 'V')
-                    "w" -> listOf('w', 'W')
-                    "x" -> listOf('x', 'X')
-                    "y" -> listOf('y', 'Y')
-                    "z" -> listOf('z', 'Z')
+                    in (('a'..'z') + ('A'..'Z')).map { "$it" } -> listOf(level.toLowerCase(), level.toUpperCase())
                     else -> null
                 }?.map { "$it" }
-                var list = listOf<EpisodeApiInfo>()
                 if (!checkLevel.isNullOrEmpty()) {
+                    var list = listOf<EpisodeApiInfo>()
                     transaction(db) {
                         list = Episodes.select {
                             try {
@@ -311,28 +336,26 @@ private fun Application.routing(db: Database, simpleJwt: SimpleJWT) {
                             } catch (e: Exception) {
                                 Episodes.name neq Episodes.name
                             }
-                        }
-                            .map {
-                                EpisodeApiInfo(
-                                    it[Episodes.name],
-                                    it[Episodes.image],
-                                    it[Episodes.url],
-                                    it[Episodes.description]
-                                )
-                            }
-                            .sortedBy { it.name }
+                        }.map {
+                            EpisodeApiInfo(
+                                it[Episodes.name],
+                                it[Episodes.image],
+                                it[Episodes.url],
+                                it[Episodes.description]
+                            )
+                        }.sortedBy { it.name }
                     }
                     call.respond(FreeMarkerContent("table.ftl", mapOf("data" to list)))
                 } else {
                     notFound("Unable to Retrieve")
                 }
-
-
             }
         }
 
         route("/") {
             get {
+                prettyLog(call.request.origin.port)
+                prettyLog(call.request.local.port)
                 prettyLog(call.request.origin.remoteHost)
                 call.respond(FreeMarkerContent("boottabletwo.ftl", null))
             }
@@ -364,6 +387,10 @@ suspend fun PipelineContext<Unit, ApplicationCall>.notFound(text: String = "Not 
         }
     }
 }
+
+inline fun <reified T> makeServerRequest(url: String): T? = getAPIRequest<T>("http://127.0.0.1:9090/$url")
+
+fun makeServerRequest(url: String): String? = makeAPIRequest("http://127.0.0.1:9090/$url")
 
 fun makeAPIRequest(url: String): String? {
     val client = OkHttpClient();

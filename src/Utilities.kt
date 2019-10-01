@@ -2,8 +2,13 @@ package com.example
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import io.ktor.application.ApplicationCall
+import io.ktor.application.call
+import io.ktor.util.pipeline.PipelineContext
+import kotlinx.coroutines.Job
 import kotlin.random.Random
 import kotlin.reflect.KClass
+import kotlin.system.measureTimeMillis
 
 fun randomName(): String = listOf(
     "Austin", "Bob", "Chuck", "Darren", "Eric", "Frank", "Gary", "Harry", "Jacob", "Kevin", "Logan",
@@ -28,6 +33,16 @@ fun Any.toPrettyJson(): String = GsonBuilder().setPrettyPrinting().create().toJs
 val envKind get() = System.getenv("KTOR_ENV")
 val isDev get() = envKind == "dev"
 val isProd get() = envKind != "dev"
+
+fun PipelineContext<Unit, ApplicationCall>.isPrivateApi(): Boolean = call.request.local.port == 9090
+
+suspend fun timeAction(block: () -> Job): Pair<Long, Long> {
+    val start = System.currentTimeMillis()
+    val time = measureTimeMillis {
+        block().join()
+    }
+    return Pair(start, time)
+}
 
 fun prettyLog(msg: Any?) {
     //the main message to be logged
