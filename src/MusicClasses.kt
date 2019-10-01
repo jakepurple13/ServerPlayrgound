@@ -67,8 +67,13 @@ fun Routing.musicGameApi() {
                     try {
                         val snippetQuiz = Gson().fromJson<SnippetBase>(snipId, SnippetBase::class.java)
                         val text = snippetQuiz.message?.body?.snippet?.snippet_body
+                        val questionText = if (text.isNullOrBlank()) {
+                            "Something went wrong, here's a freebie.\n${track.name}"
+                        } else {
+                            text
+                        }
                         val quizQuestions = QuizQuestions(
-                            text!!,
+                            questionText,
                             listOf(
                                 track.name,
                                 list.randomRemove().name,
@@ -92,9 +97,9 @@ fun Routing.musicGameApi() {
             var text = ""
             val hs = highScores.groupBy { it.artist }
             hs.keys.forEach { info ->
-                text+=info + "\n"
+                text += info + "\n"
                 hs[info]?.forEach {
-                    text+="\t${it.name} | ${it.score}\n"
+                    text += "\t${it.name} | ${it.score}\n"
                 }
             }
             call.respond(text)
@@ -127,7 +132,7 @@ fun Routing.musicGameApi() {
         post("/") {
             val info = call.receive<MusicUserInfo>()
             prettyLog(info)
-            highScores+=info
+            highScores += info
             call.respond(mapOf("submitted" to true))
         }
         static {
