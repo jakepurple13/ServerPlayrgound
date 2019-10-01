@@ -81,5 +81,5 @@ fun prettyLog(msg: Any?) {
 
     logged += loc
 
-    println(SimpleDateFormat("MM/dd hh:mm:ss a").format(System.currentTimeMillis())!! + ": " + logged + "\n")
+    println(SimpleDateFormat("MM/dd hh:mm:ss.SSS a").format(System.currentTimeMillis())!! + ": " + logged + "\n")
 }

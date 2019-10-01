@@ -57,7 +57,7 @@ import java.text.SimpleDateFormat
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 
-fun main(args: Array<String>): Unit {
+fun main() {
     val env = applicationEngineEnvironment {
         module {
             module()
@@ -93,12 +93,12 @@ fun Application.module() {
 
     monitoring(highScoreFile)
     installing(simpleJwt)
-    timeSave(highScoreFile)
+    timeSave(highScoreFile, db)
     database(db)
     routing(db, simpleJwt)
 }
 
-private fun Application.timeSave(highScoreFile: File) {
+private fun Application.timeSave(highScoreFile: File, db: Database) {
     GlobalScope.launch {
         while (true) {
             //Every 5 minutes save the highscore information
