@@ -1,6 +1,14 @@
 package com.example
 
-// result generated from /json
+data class DidYouKnowFact(
+    val id: String,
+    val text: String,
+    val source_url: String,
+    val language: String,
+    val permalink: String
+)
+
+fun getDidYouKnowFact() = getAPIRequest<DidYouKnowFact>("https://uselessfacts.jsph.pl/random.json?language=en")
 
 data class JokeBase(val success: Success?, val contents: Contents?)
 
@@ -47,3 +55,9 @@ data class EvilInsult(
 )
 
 fun getEvilInsult() = getAPIRequest<EvilInsult>("https://evilinsult.com/generate_insult.php?lang=en&type=json")?.insult
+
+data class DadJoke(val id: String?, val joke: String?, val status: Number?)
+
+fun getDadJoke() = getAPIRequest<DadJoke>("https://icanhazdadjoke.com/") {
+    addHeader("Accept", "application/json")
+}?.joke

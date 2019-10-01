@@ -2,8 +2,6 @@
 
 package com.example
 
-import com.auth0.jwt.JWT
-import com.auth0.jwt.algorithms.Algorithm
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.google.gson.Gson
 import freemarker.cache.ClassTemplateLoader
@@ -56,7 +54,6 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import java.io.File
 import java.text.SimpleDateFormat
 import java.time.Duration
-import java.util.*
 import java.util.concurrent.TimeUnit
 
 fun main(args: Array<String>): Unit {
@@ -289,7 +286,7 @@ private fun Application.routing(db: Database, simpleJwt: SimpleJWT) {
 
         route("/private") {
             get("/{action}Shows") {
-                when(call.parameters["action"]!!) {
+                when (call.parameters["action"]!!) {
                     "update" -> {
                         getOrUpdateShows {
                             updateShows(db)
@@ -392,19 +389,21 @@ inline fun <reified T> makeServerRequest(url: String): T? = getAPIRequest<T>("ht
 
 fun makeServerRequest(url: String): String? = makeAPIRequest("http://127.0.0.1:9090/$url")
 
-fun makeAPIRequest(url: String): String? {
-    val client = OkHttpClient();
+fun makeAPIRequest(url: String, requestConfig: Request.Builder.() -> Request.Builder = { this }): String? {
+    val client = OkHttpClient()
     val request = Request.Builder()
         .url(url)
+        .requestConfig()
         .build()
 
     client.newCall(request).execute().use { response -> return response.body?.string() }
 }
 
-inline fun <reified T> getAPIRequest(url: String): T? {
-    val client = OkHttpClient();
+inline fun <reified T> getAPIRequest(url: String, requestConfig: Request.Builder.() -> Request.Builder = { this }): T? {
+    val client = OkHttpClient()
     val request = Request.Builder()
         .url(url)
+        .requestConfig()
         .build()
 
     client.newCall(request).execute().use { response ->
@@ -413,34 +412,3 @@ inline fun <reified T> getAPIRequest(url: String): T? {
         }
     }
 }
-
-data class PostSnippet(val snippet: PostSnippet.Text) {
-    data class Text(val text: String)
-}
-
-data class Snippet(val user: String, val text: String)
-
-val snippets = Collections.synchronizedList(
-    mutableListOf(
-        Snippet(user = "test", text = "hello"),
-        Snippet(user = "test", text = "world")
-    )
-)
-
-open class SimpleJWT(val secret: String) {
-    private val algorithm = Algorithm.HMAC256(secret)
-    val verifier = JWT.require(algorithm).build()
-    fun sign(name: String): String = JWT.create().withClaim("name", name).sign(algorithm)
-}
-
-class User(val name: String, val password: String)
-
-val users = Collections.synchronizedMap(
-    listOf(User("test", "test"))
-        .associateBy { it.name }
-        .toMutableMap()
-)
-
-class InvalidCredentialsException(message: String) : RuntimeException(message)
-
-class LoginRegister(val user: String, val password: String)

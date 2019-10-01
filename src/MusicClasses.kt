@@ -79,7 +79,7 @@ fun Routing.musicGameApi() {
                         )
                         qList += quizQuestions
                     } catch (e: Exception) {
-
+                        continue
                     }
                 }
                 call.respond(qList)

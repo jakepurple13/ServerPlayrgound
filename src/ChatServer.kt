@@ -227,28 +227,37 @@ class ChatServer {
         broadcast(sender, formatted, MessageType.MESSAGE)
     }
 
-    data class DidYouKnowFact(
-        val id: String,
-        val text: String,
-        val source_url: String,
-        val language: String,
-        val permalink: String
-    )
+    private suspend fun somethingWentWrong(sender: String, message: String = "Something went wrong") {
+        val sendMessage =
+            SendMessage(ChatUser("Server"), message, MessageType.SERVER)
+        members[sender]?.send(Frame.Text(sendMessage.toJson()))
+    }
 
-    suspend fun didYouKnow() {
-        val url = "https://uselessfacts.jsph.pl/random.json?language=en"
-        val d = Gson().fromJson(makeAPIRequest(url), DidYouKnowFact::class.java)
-        broadcast("Server", d.text, MessageType.MESSAGE)
+    suspend fun didYouKnow(sender: String) {
+        try {
+
+            broadcast("Server", getDidYouKnowFact()!!.text, MessageType.MESSAGE)
+        } catch(e: Exception) {
+
+        }
     }
 
     suspend fun joke(sender: String) {
-        val j = getJoke()
-        if (j != null) {
-            broadcast("Server", "${j.title}\n${j.text}", MessageType.MESSAGE)
-        } else {
-            val sendMessage =
-                SendMessage(ChatUser("Server"), "Something went wrong getting the joke", MessageType.SERVER)
-            members[sender]?.send(Frame.Text(sendMessage.toJson()))
+        val j = getJoke()?.let {
+            broadcast("Server", "${it.title}\n${it.text}", MessageType.MESSAGE)
+        }
+        if (j == null) {
+            somethingWentWrong(sender, "Something went wrong getting the joke")
+        }
+    }
+
+    suspend fun dadJoke(sender: String) {
+        val j = getDadJoke()?.let {
+            broadcast("Dad", it, MessageType.MESSAGE)
+        }
+        if (j == null) {
+            somethingWentWrong(sender, "Something went wrong getting the joke")
+
         }
     }
 
@@ -269,9 +278,7 @@ class ChatServer {
             broadcast("EvilInsult", it, MessageType.MESSAGE)
         }
         if (j == null) {
-            val sendMessage =
-                SendMessage(ChatUser("Server"), "Something went wrong getting the insult", MessageType.SERVER)
-            members[sender]?.send(Frame.Text(sendMessage.toJson()))
+            somethingWentWrong(sender, "Something went wrong getting the insult")
         }
     }
 

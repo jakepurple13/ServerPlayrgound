@@ -218,14 +218,4 @@ data class EpisodeApiInfo(
     val url: String = "",
     val description: String = "",
     val episodeList: List<EpListInfo> = emptyList()
-) {
-    companion object {
-        fun fromApi(ea: EpisodeApi) = EpisodeApiInfo(
-            ea.name,
-            ea.image,
-            ea.source.url,
-            ea.description,
-            ea.episodeList.map { EpListInfo(it.name, it.url) })
-        //fun fromDB(ea: Episodes) = EpisodeApiInfo()
-    }
-}
+)
