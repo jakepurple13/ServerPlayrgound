@@ -237,8 +237,8 @@ fun Route.addShowQuiz(db: Database) {
         val type = call.parameters["type"]!!
         var list = mutableListOf<EpisodeApiInfo>()
         transaction(db) {
-            list = Episode.find { Episodes.url like "%$type%" }.limit(100)
-                .map { EpisodeApiInfo(it.name, it.image, it.url, it.description) }.shuffled().toMutableList()
+            list = Episode.find { Episodes.url like "%$type%" }
+                .map { EpisodeApiInfo(it.name, it.image, it.url, it.description) }.shuffled().take(100).toMutableList()
         }
         quiz(list, question = {
             it.description
