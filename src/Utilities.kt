@@ -8,20 +8,21 @@ import io.ktor.util.pipeline.PipelineContext
 import kotlinx.coroutines.Job
 import java.text.SimpleDateFormat
 import kotlin.random.Random
-import kotlin.reflect.KClass
 import kotlin.system.measureTimeMillis
 
-fun randomName(): String = listOf(
-    "Austin", "Bob", "Chuck", "Darren", "Eric", "Frank", "Gary", "Harry", "Jacob", "Kevin", "Logan",
-    "Martin", "Norman", "Odin", "Peter", "Ryan", "Steven", "Tom", "Way", "Yosef",
-    "Anna", "Bobbette", "Cherry", "Dana", "Erica", "Freja", "Gina", "Hana", "Jenna", "Kari", "Lynda",
-    "Maya", "Nora", "Odina", "Patrica", "Rachel", "Sherry", "Tanya", "Whitney", "Yerenny",
+private val names = listOf(
+    "Austin", "Bob", "Chuck", "Darren", "Eric", "Frank", "Gary", "Harry", "Io", "Jacob", "Kevin", "Logan",
+    "Martin", "Norman", "Odin", "Peter", "Quest", "Ryan", "Steven", "Tom", "Underwood", "Vigil", "Way", "Xanthos", "Yosef", "Zero",
+    "Anna", "Bobbette", "Cherry", "Dana", "Erica", "Freja", "Gina", "Hana", "Irma", "Jenna", "Kari", "Lynda",
+    "Maya", "Nora", "Odina", "Patrica", "Questa", "Rachel", "Sherry", "Tanya", "Unita", "Vidal", "Whitney", "Xanthas", "Yerenny", "Zandra",
     "Chris", "Daniel", "Jordan"
-).random()
+)
 
-inline fun <reified T : Enum<T>> randomEnum() = enumValues<T>().random()
+fun randomName(): String = names.random()
 
-inline fun <reified T : Enum<T>> KClass<T>.random() = enumValues<T>().random()
+//inline fun <reified T : Enum<T>> randomEnum() = enumValues<T>().random()
+
+//inline fun <reified T : Enum<T>> KClass<T>.random() = enumValues<T>().random()
 
 fun <T> MutableList<T>.randomRemove(): T {
     return removeAt(Random.nextInt(0, size))
@@ -81,5 +82,5 @@ fun prettyLog(msg: Any?) {
 
     logged += loc
 
-    println(SimpleDateFormat("MM/dd hh:mm:ss.SSS a").format(System.currentTimeMillis())!! + ": " + logged + "\n")
+    println(SimpleDateFormat("MM/dd hh:mm:ss.SSS a").format(System.currentTimeMillis())!! + "/${Thread.currentThread().name}: " + logged + "\n")
 }

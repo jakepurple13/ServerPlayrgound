@@ -5,13 +5,6 @@ import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.runBlocking
 import kotlinx.html.*
 import kotlinx.html.stream.createHTML
-import kotlin.collections.MutableList
-import kotlin.collections.forEach
-import kotlin.collections.listOf
-import kotlin.collections.mutableListOf
-import kotlin.collections.mutableMapOf
-import kotlin.collections.plus
-import kotlin.collections.random
 import kotlin.collections.set
 import kotlin.test.Test
 
@@ -19,13 +12,13 @@ class ApplicationTest {
 
     @Test
     fun genericEnumTest() {
-        randomEnum<Source>().apply { prettyLog(this) }
+        /*randomEnum<Source>().apply { prettyLog(this) }
         Source.values().random().apply { prettyLog(this) }
         Source::class.random().apply { prettyLog(this) }
 
         randomEnum<ChatServer.MessageType>().apply { prettyLog(this) }
         ChatServer.MessageType.values().random().apply { prettyLog(this) }
-        ChatServer.MessageType::class.random().apply { prettyLog(this) }
+        ChatServer.MessageType::class.random().apply { prettyLog(this) }*/
     }
 
     @Test

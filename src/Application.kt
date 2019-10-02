@@ -111,26 +111,12 @@ private fun Application.timeSave(highScoreFile: File, db: Database) {
 
 private fun Application.database(db: Database) {
     GlobalScope.launch {
-        //getAllShows(db)
-        //getAllShowsAndEpisodes(db)
-        //prettyLog(ShowApi(Source.LIVE_ACTION_MOVIES).showInfoList.joinToString { "$it\n" })
-        //updateShows(db)
         //val cssGridLayout = "https://grid.layoutit.com/"
-        //createEverything(db, ShowApi.getAllMovies())
-        /*transaction(db) {
-            if(Show.all().count()==0) {
-                //createEverything(db)
-                createEverything(db, ShowApi.getSources(Source.ANIME, Source.DUBBED, Source.CARTOON, Source.CARTOON_MOVIES))
-            }
-        }*/
-        //createEverything(db, ShowApi.getAllRecent())
         //createEverything(db, ShowApi(Source.RECENT_CARTOON).showInfoList)
-        //prettyLog(ShowApi(Source.LIVE_ACTION_MOVIES).showInfoList)
         //createEverything(db, ShowApi.getSources(Source.ANIME, Source.DUBBED, Source.CARTOON, Source.CARTOON_MOVIES, Source.LIVE_ACTION))
         //createEverything(db, ShowApi.getSources(Source.ANIME, Source.CARTOON, Source.DUBBED, Source.LIVE_ACTION))
         //createEverything(db, ShowApi.getSources(Source.CARTOON_MOVIES, Source.LIVE_ACTION_MOVIES))
     }
-
     /*GlobalScope.launch {
         while (true) {
             delay(3600000L)
@@ -141,21 +127,21 @@ private fun Application.database(db: Database) {
 
 private fun Application.monitoring(highScoreFile: File) {
     environment.monitor.subscribe(ApplicationStarting) {
-        println("Starting")
+        prettyLog("Starting")
     }
     environment.monitor.subscribe(ApplicationStarted) {
-        println("Started")
+        prettyLog("Started")
         musicHighScoreSetup(highScoreFile)
     }
     environment.monitor.subscribe(ApplicationStopPreparing) {
-        println("Stop Preparing")
+        prettyLog("Stop Preparing")
         musicHighScoreSave(highScoreFile)
     }
     environment.monitor.subscribe(ApplicationStopping) {
-        println("Stopping")
+        prettyLog("Stopping")
     }
     environment.monitor.subscribe(ApplicationStopped) {
-        println("Stopped")
+        prettyLog("Stopped")
     }
 }
 

@@ -20,9 +20,7 @@ fun Route.api(db: Database) {
                 QuizInfo(
                     "/show/quiz/show_type=' + \$('#quiz_choice').val() + '.json",
                     "Show Quiz",
-                    "Pick a Source (Gogoanime, Putlocker, Animetoon)",
-                    "",
-                    ""
+                    "Pick a Source (Gogoanime, Putlocker, Animetoon)"
                 )
             )
         }

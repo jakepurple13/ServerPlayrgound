@@ -5,14 +5,13 @@ import io.ktor.application.call
 import io.ktor.freemarker.FreeMarkerContent
 import io.ktor.response.respond
 import io.ktor.util.pipeline.PipelineContext
-import kotlin.random.Random
 
 data class QuizInfo(
     val questionUrl: String,
     val enterTitle: String,
     val modalTitle: String,
-    val highScoreLink: String,
-    val postHighScoreLink: String
+    val highScoreLink: String = "",
+    val postHighScoreLink: String = ""
 )
 
 suspend fun PipelineContext<Unit, ApplicationCall>.addQuiz(quizInfo: QuizInfo) {
@@ -24,7 +23,6 @@ suspend fun <T> PipelineContext<Unit, ApplicationCall>.quiz(
     question: (T) -> String?,
     answers: (T) -> String
 ) {
-    fun MutableList<T>.randomRemoveAction(block: (T) -> String) = block(removeAt(Random.nextInt(0, size)))
     val qList = mutableListOf<QuizQuestions>()
     while (list.size > 4) {
         val answer = list.randomRemove()
@@ -42,9 +40,9 @@ suspend fun <T> PipelineContext<Unit, ApplicationCall>.quiz(
             actualQuestionText,
             listOf(
                 answers(answer),
-                list.randomRemoveAction(answers),
-                list.randomRemoveAction(answers),
-                list.randomRemoveAction(answers)
+                answers(list.randomRemove()),
+                answers(list.randomRemove()),
+                answers(list.randomRemove())
             ).shuffled(),
             answers(answer)
         )
