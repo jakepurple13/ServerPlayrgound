@@ -4,15 +4,9 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import io.ktor.application.Application
 import io.ktor.application.call
-import io.ktor.http.content.defaultResource
-import io.ktor.http.content.resources
-import io.ktor.http.content.static
 import io.ktor.request.receive
 import io.ktor.response.respond
-import io.ktor.routing.Routing
-import io.ktor.routing.get
-import io.ktor.routing.post
-import io.ktor.routing.route
+import io.ktor.routing.*
 import kotlinx.html.*
 import kotlinx.html.stream.createHTML
 import java.io.File
@@ -46,53 +40,42 @@ fun Application.musicHighScoreSave(highScoreFile: File) {
 
 val highScores = mutableListOf<MusicUserInfo>()
 
+fun Route.addMusicQuiz() {
+    get("/music_get_quiz_from={artist}.json") {
+        val s = "track.search?q_artist=${call.parameters["artist"]!!}&page_size=100&page=1&f_has_lyrics=1"
+        val j = makeMusicApiRequest(s)
+        val q = Gson().fromJson<MusicBase>(j, MusicBase::class.java)
+        val list = q.message?.body?.track_list?.map {
+            TrackInfo(
+                it.track!!.track_name!!,
+                it.track.track_id!!
+            )
+        }!!.shuffled().toMutableList()
+        quiz(list, question = {
+            val snip = "track.snippet.get?track_id=${it.id}"
+            val snipId = makeMusicApiRequest(snip)
+            val snippetQuiz = Gson().fromJson<SnippetBase>(snipId, SnippetBase::class.java)
+            snippetQuiz.message?.body?.snippet?.snippet_body
+        }, answers = {
+            it.name
+        })
+    }
+}
+
 fun Routing.musicGameApi() {
     route("/music") {
-        get("/music_get_quiz_from={artist}.json") {
-            val s = "track.search?q_artist=${call.parameters["artist"]!!}&page_size=100&page=1&f_has_lyrics=1"
-            val j = makeMusicApiRequest(s)
-            try {
-                val q = Gson().fromJson<MusicBase>(j, MusicBase::class.java)
-                val list = q.message?.body?.track_list?.map {
-                    TrackInfo(
-                        it.track!!.track_name!!,
-                        it.track.track_id!!
-                    )
-                }!!.shuffled().toMutableList()
-                val qList = mutableListOf<QuizQuestions>()
-                while (list.size > 4) {
-                    val track = list.randomRemove()
-                    val snip = "track.snippet.get?track_id=${track.id}"
-                    val snipId = makeMusicApiRequest(snip)
-                    try {
-                        val snippetQuiz = Gson().fromJson<SnippetBase>(snipId, SnippetBase::class.java)
-                        val text = snippetQuiz.message?.body?.snippet?.snippet_body
-                        val questionText = if (text.isNullOrBlank()) {
-                            "Something went wrong, here's a freebie.\n${track.name}"
-                        } else {
-                            text
-                        }
-                        val quizQuestions = QuizQuestions(
-                            questionText,
-                            listOf(
-                                track.name,
-                                list.randomRemove().name,
-                                list.randomRemove().name,
-                                list.randomRemove().name
-                            ),
-                            track.name
-                        )
-                        qList += quizQuestions
-                    } catch (e: Exception) {
-                        continue
-                    }
-                }
-                call.respond(qList)
-            } catch (e: Exception) {
-                prettyLog(j)
-                call.respond(j.toString())
-            }
+        get {
+            addQuiz(
+                QuizInfo(
+                    "/music/music_get_quiz_from=' + \$('#quiz_choice').val() + '.json",
+                    "Music Quiz",
+                    "Pick An Artist",
+                    "/music/highScores.json",
+                    "/music"
+                )
+            )
         }
+        addMusicQuiz()
         get("/mobileHighScores.json") {
             var text = ""
             val hs = highScores.groupBy { it.artist }
@@ -135,12 +118,12 @@ fun Routing.musicGameApi() {
             highScores += info
             call.respond(mapOf("submitted" to true))
         }
-        static {
+        /*static {
             // This marks index.html from the 'web' folder in resources as the default file to serve.
             defaultResource("musicgame.html", "web")
             // This serves files from the 'web' folder in the application resources.
             resources("web")
-        }
+        }*/
     }
 }
 

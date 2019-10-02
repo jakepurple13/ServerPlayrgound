@@ -1,0 +1,45 @@
+/*get("/music_get_quiz_from={artist}.json") {
+            val s = "track.search?q_artist=${call.parameters["artist"]!!}&page_size=100&page=1&f_has_lyrics=1"
+            val j = makeMusicApiRequest(s)
+            try {
+                val q = Gson().fromJson<MusicBase>(j, MusicBase::class.java)
+                val list = q.message?.body?.track_list?.map {
+                    TrackInfo(
+                        it.track!!.track_name!!,
+                        it.track.track_id!!
+                    )
+                }!!.shuffled().toMutableList()
+                val qList = mutableListOf<QuizQuestions>()
+                while (list.size > 4) {
+                    val track = list.randomRemove()
+                    val snip = "track.snippet.get?track_id=${track.id}"
+                    val snipId = makeMusicApiRequest(snip)
+                    try {
+                        val snippetQuiz = Gson().fromJson<SnippetBase>(snipId, SnippetBase::class.java)
+                        val text = snippetQuiz.message?.body?.snippet?.snippet_body
+                        val questionText = if (text.isNullOrBlank()) {
+                            "Something went wrong, here's a freebie.\n${track.name}"
+                        } else {
+                            text
+                        }
+                        val quizQuestions = QuizQuestions(
+                            questionText,
+                            listOf(
+                                track.name,
+                                list.randomRemove().name,
+                                list.randomRemove().name,
+                                list.randomRemove().name
+                            ),
+                            track.name
+                        )
+                        qList += quizQuestions
+                    } catch (e: Exception) {
+                        continue
+                    }
+                }
+                call.respond(qList)
+            } catch (e: Exception) {
+                prettyLog(j)
+                call.respond(j.toString())
+            }
+        }*/

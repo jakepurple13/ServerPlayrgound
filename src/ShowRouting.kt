@@ -14,6 +14,20 @@ import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 
 fun Route.api(db: Database) {
+    route("/show/quiz") {
+        get {
+            addQuiz(
+                QuizInfo(
+                    "/show/quiz/show_type=' + \$('#quiz_choice').val() + '.json",
+                    "Show Quiz",
+                    "Pick a Source (Gogoanime, Putlocker, Animetoon)",
+                    "",
+                    ""
+                )
+            )
+        }
+        addShowQuiz(db)
+    }
     route("/api") {
         get("/about") {
             call.respondHtml {
@@ -219,3 +233,19 @@ data class EpisodeApiInfo(
     val description: String = "",
     val episodeList: List<EpListInfo> = emptyList()
 )
+
+fun Route.addShowQuiz(db: Database) {
+    get("/show_type={type}.json") {
+        val type = call.parameters["type"]!!
+        var list = mutableListOf<EpisodeApiInfo>()
+        transaction(db) {
+            list = Episode.find { Episodes.url like "%$type%" }.limit(100)
+                .map { EpisodeApiInfo(it.name, it.image, it.url, it.description) }.shuffled().toMutableList()
+        }
+        quiz(list, question = {
+            it.description
+        }, answers = {
+            it.name
+        })
+    }
+}
