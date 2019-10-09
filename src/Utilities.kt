@@ -15,7 +15,7 @@ private val names = listOf(
     "Martin", "Norman", "Odin", "Peter", "Quest", "Ryan", "Steven", "Tom", "Underwood", "Vigil", "Way", "Xanthos", "Yosef", "Zero",
     "Anna", "Bobbette", "Cherry", "Dana", "Erica", "Freja", "Gina", "Hana", "Irma", "Jenna", "Kari", "Lynda",
     "Maya", "Nora", "Odina", "Patrica", "Questa", "Rachel", "Sherry", "Tanya", "Unita", "Vidal", "Whitney", "Xanthas", "Yerenny", "Zandra",
-    "Chris", "Daniel", "Jordan"
+    "Chris", "Daniel", "Jordan", "Sam"
 )
 
 fun randomName(): String = names.random()
