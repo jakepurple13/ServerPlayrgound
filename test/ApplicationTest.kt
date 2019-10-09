@@ -21,6 +21,15 @@ class ApplicationTest {
         ChatServer.MessageType::class.random().apply { prettyLog(this) }*/
     }
 
+    fun <T> Any.check(vararg checkAgainst: T): Boolean {
+        for(c in checkAgainst) {
+            if(this != c) {
+                return false
+            }
+        }
+        return true
+    }
+
     @Test
     fun jokeTest() {
         System.setProperty("https.protocols", "TLSv1.2,TLSv1.1,SSLv3")
