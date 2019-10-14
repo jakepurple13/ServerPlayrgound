@@ -47,48 +47,6 @@
             min-height: 100%;
         }
 
-        label {
-            /* Presentation */
-            font-size: 48px
-        }
-
-        /* Required Styling */
-
-        label input[type="checkbox"] {
-            display: none;
-        }
-
-        .custom-checkbox {
-            margin-left: 2em;
-            position: relative;
-            cursor: pointer;
-        }
-
-        .custom-checkbox .glyphicon {
-            color: gold;
-            position: absolute;
-            top: 0.4em;
-            left: -1.25em;
-            font-size: 0.75em;
-        }
-
-        .custom-checkbox .glyphicon-star-empty {
-            color: gray;
-        }
-
-        .custom-checkbox .glyphicon-star {
-            opacity: 0;
-            transition: opacity 0.2s ease-in-out;
-        }
-
-        .custom-checkbox:hover .glyphicon-star {
-            opacity: 0.5;
-        }
-
-        .custom-checkbox input[type="checkbox"]:checked ~ .glyphicon-star {
-            opacity: 1;
-        }
-
     </style>
 </head>
 
@@ -98,8 +56,6 @@
         <h2>
             <label for="id-of-input" class="custom-checkbox">
                 <input type="checkbox" id="id-of-input"/>
-                <i class="glyphicon glyphicon-star-empty"></i>
-                <i class="glyphicon glyphicon-star"></i>
                 <span>${data.name}</span>
             </label>
         </h2>
@@ -201,14 +157,6 @@
         removeEpisode(element);
     });
 
-    document.getElementById("id-of-input").addEventListener('change', (event) => {
-        if (event.target.checked) {
-            favoriteShow();
-        } else {
-            unfavoriteShow();
-        }
-    });
-
     function fav() {
         if (document.getElementById('id-of-input').checked) {
             favoriteShow();
@@ -275,13 +223,13 @@
         firebase.auth().onAuthStateChanged(function (user) {
             if (user) {
 
-                /*document.getElementById('id-of-input').addEventListener('change', (event) => {
+                document.getElementById("id-of-input").addEventListener('change', (event) => {
                     if (event.target.checked) {
-                        alert('checked');
+                        favoriteShow();
                     } else {
-                        alert('not checked');
+                        unfavoriteShow();
                     }
-                });*/
+                });
 
                 // [END_EXCLUDE]
                 let url = "${data.url}";

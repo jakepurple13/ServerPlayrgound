@@ -44,6 +44,9 @@
     <button id="view_shows_by_letter" class="btn btn-primary">
         View Shows By Letter
     </button>
+    <button id="sign_in" class="btn btn-primary">
+        Login
+    </button>
 </div>
 <table
         class="table-dark"
@@ -54,6 +57,7 @@
         data-search="true"
         data-custom-search="customSearch"
         data-show-jump-to="true"
+        data-checkbox-header="false"
         data-advanced-search="true"
         data-id-table="advancedTable"
         data-height="750"
@@ -65,6 +69,7 @@
         data-show-refresh="true">
     <thead>
     <tr>
+        <th data-checkbox="true" data-checkbox-enabled="true"></th>
         <th data-field="name">Name</th>
         <th data-field="url">URL</th>
     </tr>
@@ -91,10 +96,89 @@
 
 <script type="text/javascript" src="/chat/helperUtils.js"></script>
 
+<!-- Firebase App (the core Firebase SDK) is always required and must be listed first -->
+<script src="https://www.gstatic.com/firebasejs/7.1.0/firebase-app.js"></script>
+
+<!-- Add Firebase products that you want to use -->
+<script src="https://www.gstatic.com/firebasejs/7.1.0/firebase-auth.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/7.1.0/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/7.2.0/firebase-firestore.js"></script>
+
 </body>
 <script>
 
+    function favoriteShow(element) {
+        firebase.firestore().collection(firebase.auth().currentUser.uid)
+            .doc(replaceAll(element.url, "/", "<"))
+            .set({
+                "name": element.name,
+                "url": element.url,
+                "showNum": 0
+            });
+    }
+
+    function unfavoriteShow(element) {
+        firebase.firestore().collection(firebase.auth().currentUser.uid)
+            .doc(replaceAll(element.url, "/", "<"))
+            .delete();
+    }
+
     var table = $('#table');
+
+    function getUrl(info) {
+        return info.url//"<a href=\"" + info.url + "\">" + info.url + "</a>"
+    }
+
+    function replaceAll(str, find, replace) {
+        return str.replace(new RegExp(find, 'g'), replace);
+    }
+
+    function getDocUrl(info) {
+        return replaceAll(info.id, "<", "/");
+    }
+
+    function initApp() {
+        firebase.auth().onAuthStateChanged(function (user) {
+            if (user) {
+
+                $('#sign_in').text("Logout");
+
+                table.on('check.bs.table', function (row, element) {
+                    console.log(element);
+                    favoriteShow(element);
+                });
+
+                table.on('uncheck.bs.table', function (row, element) {
+                    console.log(element);
+                    unfavoriteShow(element);
+                });
+
+                // [END_EXCLUDE]
+                const database = firebase.firestore().collection(firebase.auth().currentUser.uid);
+                database.get().then(function (collection) {
+                    console.log("Collection data:", collection);
+                    let info = collection.docs.map(getDocUrl);
+                    console.log(info);
+                    table.bootstrapTable('checkBy', {field: 'url', values: info});
+                    table.on('page-change.bs.table', function (number, size) {
+                        table.bootstrapTable('checkBy', {field: 'url', values: info});
+                    });
+                }).catch(function (error) {
+                    console.log("Error getting document:", error);
+                });
+            }
+        });
+    }
+
+    window.onload = function () {
+        const firebaseConfig = {
+            //TODO: DONT FORGET HERE!!!
+        };
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        initApp();
+    };
 
     function loadNewData() {
         var url = $('#locale').val();
@@ -109,6 +193,10 @@
             var u = element[0].cells[1].innerHTML;
             openEpisode(u);
         }
+    });
+
+    $('#sign_in').click(function () {
+        window.open("/userinfo", 'FUN', "width=500,height=500");
     });
 
     $('#remove').click(function () {
