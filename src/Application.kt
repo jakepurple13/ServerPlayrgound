@@ -216,6 +216,7 @@ private fun Application.routing(db: Database, simpleJwt: SimpleJWT) {
             }
         }
 
+        firebaseRoute()
         chatRoute()
         api(db)
         musicGameApi()
