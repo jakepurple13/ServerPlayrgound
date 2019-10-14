@@ -195,10 +195,7 @@
             // [END_EXCLUDE]
             const database = firebase.firestore().collection(firebase.auth().currentUser.uid);
             database.get().then(function (collection) {
-                let f = collection.docs.map(favDocs);
-                console.log(f);
                 table.bootstrapTable('load', collection.docs.map(favDocs));
-                console.log(table.bootstrapTable('getData'));
             }).catch(function (error) {
                 console.log("Error getting document:", error);
             });
