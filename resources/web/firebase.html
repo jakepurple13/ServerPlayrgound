@@ -13,6 +13,7 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js"
             integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k"
             crossorigin="anonymous"></script>
+    <script type="text/javascript" src="/chat/helperUtils.js"></script>
     <meta charset="UTF-8">
     <title>Title</title>
 
@@ -119,16 +120,6 @@
         document.getElementById('quickstart-sign-in').addEventListener('click', toggleSignIn, false);
     }
     window.onload = function() {
-        const firebaseConfig = {
-            //TODO: DONT FORGET HERE!!!
-            apiKey: "AIzaSyDhqB2JjisKADWFPKuk_44-MmZP25_Eijs",
-            authDomain: "chesstest-3cd2a.firebaseapp.com",
-            databaseURL: "https://chesstest-3cd2a.firebaseio.com",
-            projectId: "chesstest-3cd2a",
-            storageBucket: "chesstest-3cd2a.appspot.com",
-            messagingSenderId: "139228686141",
-            appId: "1:139228686141:web:963e504a52c674f2eb4754"
-        };
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         initApp();

@@ -125,6 +125,7 @@
 
     <script src="https://www.gstatic.com/firebasejs/7.1.0/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/7.2.0/firebase-firestore.js"></script>
+    <script type="text/javascript" src="/chat/helperUtils.js"></script>
 </div>
 </body>
 <script>
@@ -257,16 +258,6 @@
     }
 
     window.onload = function () {
-        const firebaseConfig = {
-            //TODO: DONT FORGET HERE!!!
-            apiKey: "AIzaSyDhqB2JjisKADWFPKuk_44-MmZP25_Eijs",
-            authDomain: "chesstest-3cd2a.firebaseapp.com",
-            databaseURL: "https://chesstest-3cd2a.firebaseio.com",
-            projectId: "chesstest-3cd2a",
-            storageBucket: "chesstest-3cd2a.appspot.com",
-            messagingSenderId: "139228686141",
-            appId: "1:139228686141:web:963e504a52c674f2eb4754"
-        };
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         initApp();
