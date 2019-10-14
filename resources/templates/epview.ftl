@@ -3,6 +3,7 @@
 <html>
 
 <head>
+    <title>${data.name}</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css"
@@ -46,13 +47,62 @@
             min-height: 100%;
         }
 
+        label {
+            /* Presentation */
+            font-size: 48px
+        }
+
+        /* Required Styling */
+
+        label input[type="checkbox"] {
+            display: none;
+        }
+
+        .custom-checkbox {
+            margin-left: 2em;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .custom-checkbox .glyphicon {
+            color: gold;
+            position: absolute;
+            top: 0.4em;
+            left: -1.25em;
+            font-size: 0.75em;
+        }
+
+        .custom-checkbox .glyphicon-star-empty {
+            color: gray;
+        }
+
+        .custom-checkbox .glyphicon-star {
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+        }
+
+        .custom-checkbox:hover .glyphicon-star {
+            opacity: 0.5;
+        }
+
+        .custom-checkbox input[type="checkbox"]:checked ~ .glyphicon-star {
+            opacity: 1;
+        }
+
     </style>
 </head>
 
 <body>
 <div class="grid-container">
     <div class="title">
-        <h2>${data.name}</h2>
+        <h2>
+            <label for="id-of-input" class="custom-checkbox">
+                <input type="checkbox" id="id-of-input"/>
+                <i class="glyphicon glyphicon-star-empty"></i>
+                <i class="glyphicon glyphicon-star"></i>
+                <span>${data.name}</span>
+            </label>
+        </h2>
         <p><a href="${data.url}">${data.url}</a></p>
     </div>
     <div class="description">
@@ -71,12 +121,14 @@
                class="table-dark table-fixed"
                data-search="true"
                data-show-jump-to="true"
+               data-checkbox-header="false"
                id="table"
                data-height="750"
                data-pagination="true"
                data-page-list="[10, 25, 50, 100, all]">
             <thead>
             <tr class="header">
+                <th data-checkbox="true" data-checkbox-enabled="true"></th>
                 <th data-field="name" data-width="300">Episode Name</th>
                 <th data-field="url" data-width="300">Url</th>
                 <th data-field="vidurl" data-width="300">Video Link</th>
@@ -85,6 +137,7 @@
             <tbody>
             <#list data.episodeList as i>
                 <tr>
+                    <td></td>
                     <td>${i.name}</td>
                     <td><a href="${i.url}">${i.url}</a></td>
                     <td>
@@ -108,6 +161,14 @@
             crossorigin="anonymous"></script>
     <script src="https://unpkg.com/bootstrap-table@1.15.4/dist/bootstrap-table.min.js"></script>
     <script src="https://unpkg.com/bootstrap-table@1.15.4/dist/extensions/page-jump-to/bootstrap-table-page-jump-to.min.js"></script>
+    <!-- Firebase App (the core Firebase SDK) is always required and must be listed first -->
+    <script src="https://www.gstatic.com/firebasejs/7.1.0/firebase-app.js"></script>
+
+    <!-- Add Firebase products that you want to use -->
+    <script src="https://www.gstatic.com/firebasejs/7.1.0/firebase-auth.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/7.1.0/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.2.0/firebase-firestore.js"></script>
 </div>
 </body>
 <script>
@@ -128,6 +189,133 @@
 
     String.prototype.replaceAll = function (str1, str2, ignore) {
         return this.replace(new RegExp(str1.replace(/([\/\,\!\\\^\$\{\}\[\]\(\)\.\*\+\?\|\<\>\-\&])/g, "\\$&"), (ignore ? "gi" : "g")), (typeof (str2) == "string") ? str2.replace(/\$/g, "$$$$") : str2);
+    };
+
+    $('#table').on('check.bs.table', function (row, element) {
+        console.log(element);
+        addEpisode(element);
+    });
+
+    $('#table').on('uncheck.bs.table', function (row, element) {
+        console.log(element);
+        removeEpisode(element);
+    });
+
+    document.getElementById("id-of-input").addEventListener('change', (event) => {
+        if (event.target.checked) {
+            favoriteShow();
+        } else {
+            unfavoriteShow();
+        }
+    });
+
+    function fav() {
+        if (document.getElementById('id-of-input').checked) {
+            favoriteShow();
+        } else {
+            unfavoriteShow();
+        }
+    }
+
+    function favoriteShow() {
+        firebase.firestore().collection(firebase.auth().currentUser.uid)
+            .doc("${data.url}".replaceAll("/", "<"))
+            .set({
+                "name": "${data.name}",
+                "url": "${data.url}",
+                "showNum": ${data.episodeList?size}
+            });
+    }
+
+    function unfavoriteShow() {
+        firebase.firestore().collection(firebase.auth().currentUser.uid)
+            .doc("${data.url}".replaceAll("/", "<"))
+            .delete();
+    }
+
+    function createElementFromHTML(htmlString) {
+        let div = document.createElement('div');
+        div.innerHTML = htmlString.trim();
+
+        // Change this to div.childNodes to support multiple top-level nodes
+        return div.firstChild;
+    }
+
+    function addEpisode(element) {
+        let e = createElementFromHTML(element.url);
+        console.log(e.href);
+        const database = firebase.firestore().collection(firebase.auth().currentUser.uid)
+            .doc("${data.url}".replaceAll("/", "<"))
+            .update({
+                "episodeInfo": firebase.firestore.FieldValue.arrayUnion({
+                    "name": "${data.url}",
+                    "url": e.href
+                })
+            });
+    }
+
+    function removeEpisode(element) {
+        let e = createElementFromHTML(element.url);
+        console.log(e.href);
+        const database = firebase.firestore().collection(firebase.auth().currentUser.uid)
+            .doc("${data.url}".replaceAll("/", "<"))
+            .update({
+                "episodeInfo": firebase.firestore.FieldValue.arrayRemove({
+                    "name": "${data.url}",
+                    "url": e.href
+                })
+            });
+    }
+
+    function getUrl(info) {
+        return "<a href=\"" + info.url + "\">" + info.url + "</a>"
+    }
+
+    function initApp() {
+        firebase.auth().onAuthStateChanged(function (user) {
+            if (user) {
+
+                /*document.getElementById('id-of-input').addEventListener('change', (event) => {
+                    if (event.target.checked) {
+                        alert('checked');
+                    } else {
+                        alert('not checked');
+                    }
+                });*/
+
+                // [END_EXCLUDE]
+                let url = "${data.url}";
+                console.log(url);
+                const database = firebase.firestore().collection(firebase.auth().currentUser.uid).doc(url.replaceAll("/", "<"));
+                database.get().then(function (doc) {
+                    if (doc.exists) {
+                        document.getElementById('id-of-input').checked = true;
+                        console.log("Document data:", doc.data());
+                        let info = doc.data().episodeInfo.map(getUrl);
+                        console.log(info);
+                        $('#table').bootstrapTable('checkBy', {field: 'url', values: info});
+                        $('#table').on('page-change.bs.table', function (number, size) {
+                            $('#table').bootstrapTable('checkBy', {field: 'url', values: info});
+                        });
+                    } else {
+                        // doc.data() will be undefined in this case
+                        console.log("No such document!");
+                    }
+                }).catch(function (error) {
+                    console.log("Error getting document:", error);
+                });
+            }
+        });
+    }
+
+    window.onload = function () {
+        const firebaseConfig = {
+            //TODO: DONT FORGET HERE!!!
+
+        };
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        initApp();
     };
 
 </script>
