@@ -29,6 +29,7 @@
         </div>
         <select class="custom-select" id="locale" onchange='loadNewData()'>
             <option disabled selected>Select</option>
+            <option value='favorites'>Favorites</option>
             <option value='/api/web/ra.json'>Recent Anime</option>
             <option value='/api/web/rl.json'>Recent TV Shows</option>
             <option value='/api/web/rc.json'>Recent Cartoon</option>
@@ -180,10 +181,30 @@
         initApp();
     };
 
+    function favDocs(info) {
+        return {
+            'name': info.data().name,
+            'url': info.data().url
+        }
+    }
+
     function loadNewData() {
         var url = $('#locale').val();
         console.log(url);
-        table.bootstrapTable('refresh', {url: url});
+        if (url === "favorites") {
+            // [END_EXCLUDE]
+            const database = firebase.firestore().collection(firebase.auth().currentUser.uid);
+            database.get().then(function (collection) {
+                let f = collection.docs.map(favDocs);
+                console.log(f);
+                table.bootstrapTable('load', collection.docs.map(favDocs));
+                console.log(table.bootstrapTable('getData'));
+            }).catch(function (error) {
+                console.log("Error getting document:", error);
+            });
+        } else {
+            table.bootstrapTable('refresh', {url: url});
+        }
     }
 
     table.bootstrapTable({
