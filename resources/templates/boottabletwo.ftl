@@ -63,7 +63,7 @@
         data-id-table="advancedTable"
         data-height="750"
         data-virtual-scroll="true"
-        data-click-to-select="true"
+        data-click-to-select="false"
         data-pagination="true"
         data-url="/api/web/all.json"
         data-page-list="[10, 25, 50, 100, all]"
@@ -203,7 +203,7 @@
         exportDataType: "all",
         onClickRow: function (row, element, field) {
             console.log(element[0]);
-            var u = element[0].cells[1].innerHTML;
+            var u = element[0].cells[2].innerHTML;
             openEpisode(u);
         }
     });
