@@ -4,6 +4,7 @@ package com.example
 
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.google.gson.Gson
+import dorkbox.notify.Notify
 import freemarker.cache.ClassTemplateLoader
 import io.ktor.application.*
 import io.ktor.auth.Authentication
@@ -112,10 +113,13 @@ private fun Application.timeSave(highScoreFile: File, db: Database) {
 private fun Application.database(db: Database) {
     GlobalScope.launch {
         //val cssGridLayout = "https://grid.layoutit.com/"
-        //createEverything(db, ShowApi(Source.RECENT_CARTOON).showInfoList)
         //createEverything(db, ShowApi.getSources(Source.ANIME, Source.DUBBED, Source.CARTOON, Source.CARTOON_MOVIES, Source.LIVE_ACTION))
-        //createEverything(db, ShowApi.getSources(Source.ANIME, Source.CARTOON, Source.DUBBED, Source.LIVE_ACTION))
         //createEverything(db, ShowApi.getSources(Source.CARTOON_MOVIES, Source.LIVE_ACTION_MOVIES))
+        Notify.create()
+            .title("Finished")
+            .text("Finished getting sources")
+            .darkStyle()
+            .show()
     }
     /*GlobalScope.launch {
         while (true) {

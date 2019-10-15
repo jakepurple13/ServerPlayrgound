@@ -131,10 +131,6 @@
         return info.url//"<a href=\"" + info.url + "\">" + info.url + "</a>"
     }
 
-    function replaceAll(str, find, replace) {
-        return str.replace(new RegExp(find, 'g'), replace);
-    }
-
     function getDocUrl(info) {
         return replaceAll(info.id, "<", "/");
     }
@@ -168,6 +164,8 @@
                 }).catch(function (error) {
                     console.log("Error getting document:", error);
                 });
+            } else {
+                $('#sign_in').text("Login");
             }
         });
     }
