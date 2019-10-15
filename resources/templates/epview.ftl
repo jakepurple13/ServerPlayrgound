@@ -166,7 +166,7 @@
         firebase.firestore().collection(firebase.auth().currentUser.uid)
             .doc("${data.url}".replaceAll("/", "<"))
             .set({
-                "name": "${data.name}",
+                "name": '${data.name}',
                 "url": "${data.url}",
                 "showNum": ${data.episodeList?size}
             });

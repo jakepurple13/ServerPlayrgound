@@ -105,6 +105,12 @@ private fun Application.timeSave(highScoreFile: File, db: Database) {
             //Every 5 minutes save the highscore information
             delay(300000L)
             prettyLog("Saving")
+            Notify.create()
+                .title("Saving")
+                .text("Saving files")
+                .darkStyle()
+                .hideAfter(3000)
+                .show()
             musicHighScoreSave(highScoreFile)
         }
     }
@@ -119,6 +125,7 @@ private fun Application.database(db: Database) {
             .title("Finished")
             .text("Finished getting sources")
             .darkStyle()
+            .hideAfter(3000)
             .show()
     }
     /*GlobalScope.launch {
