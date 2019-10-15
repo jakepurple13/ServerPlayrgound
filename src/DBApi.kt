@@ -24,8 +24,8 @@ object DbSettings {
             isProd -> Database.connect(System.getenv("JDBC_DATABASE_URL"), driver = "org.postgresql.Driver")
             else -> Database.connect("jdbc:sqlite:$dbPath", "org.sqlite.JDBC")
         }*/
-        //Database.connect(System.getenv("JDBC_DATABASE_URL"), driver = "org.postgresql.Driver")
-        Database.connect("jdbc:sqlite:$dbPath", "org.sqlite.JDBC")
+        Database.connect(System.getenv("JDBC_DATABASE_URL"), driver = "org.postgresql.Driver")
+        //Database.connect("jdbc:sqlite:$dbPath", "org.sqlite.JDBC")
     }
 }
 
