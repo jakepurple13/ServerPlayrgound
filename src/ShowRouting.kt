@@ -38,7 +38,7 @@ fun Route.api(db: Database) {
                             +"/api/video/{url}.json"
                         }
                         dd {
-                            +"make sure all of the \"/\" are changed to \"_\" when submitting"
+                            +"make sure all of the \"/\" are changed to \"<\" when submitting"
                         }
                         br { }
                         dt {
@@ -82,7 +82,7 @@ fun Route.api(db: Database) {
         }
         get("/video/{url}.json") {
             val url = call.parameters["url"]!!
-            val vla = VideoLinkApi(url.replace("_", "/")).getVideoLink()
+            val vla = VideoLinkApi(url.replace("<", "/")).getVideoLink()
             call.respond(mapOf("videoLink" to vla))
         }
         webApi(db)

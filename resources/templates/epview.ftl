@@ -1,6 +1,6 @@
 <#-- @ftlvariable name="data" type="com.example.EpisodeApiInfo" -->
 <!doctype html>
-<html>
+<html lang="en">
 
 <head>
     <title>${data.name}</title>
@@ -15,6 +15,7 @@
 
         .grid-container {
             display: grid;
+            grid-column-gap: 5px;
             grid-template-columns: 1fr 1fr 1fr 1fr;
             grid-template-rows: 0.5fr 1fr 1fr 1fr 1fr;
             grid-template-areas: "cover title title title" "cover description description description" "episodelist episodelist episodelist episodelist" "episodelist episodelist episodelist episodelist" "episodelist episodelist episodelist episodelist";
@@ -65,7 +66,7 @@
         <p>${data.description}</p>
     </div>
     <div class="cover">
-        <img class="imagecover" id="cover_image" src="${data.image}">
+        <img class="imagecover" id="cover_image" src="${data.image}" alt="'${data.name}'">
     </div>
 
     <div class="episodelist">
@@ -129,12 +130,13 @@
 </div>
 </body>
 <script>
+    let table = $('#table');
     function getVidLink(num) {
-        var url = $("#vidlink" + num).val();
+        const url = $("#vidlink" + num).val();
         $("#showlink" + num).text("Retrieving");
         $.ajax({
             type: "GET",//or POST
-            url: "/api/video/" + url.replaceAll("/", "_") + ".json",
+            url: "/api/video/" + url.replaceAll("/", "<") + ".json",
             dataType: 'json',
             success: function (responsedata) {
                 let s = $("#showlink" + num);
@@ -144,12 +146,12 @@
         })
     }
 
-    $('#table').on('check.bs.table', function (row, element) {
+    table.on('check.bs.table', function (row, element) {
         console.log(element);
         addEpisode(element);
     });
 
-    $('#table').on('uncheck.bs.table', function (row, element) {
+    table.on('uncheck.bs.table', function (row, element) {
         console.log(element);
         removeEpisode(element);
     });
@@ -189,7 +191,7 @@
     function addEpisode(element) {
         let e = createElementFromHTML(element.url);
         console.log(e.href);
-        const database = firebase.firestore().collection(firebase.auth().currentUser.uid)
+        firebase.firestore().collection(firebase.auth().currentUser.uid)
             .doc("${data.url}".replaceAll("/", "<"))
             .update({
                 "episodeInfo": firebase.firestore.FieldValue.arrayUnion({
@@ -202,7 +204,7 @@
     function removeEpisode(element) {
         let e = createElementFromHTML(element.url);
         console.log(e.href);
-        const database = firebase.firestore().collection(firebase.auth().currentUser.uid)
+        firebase.firestore().collection(firebase.auth().currentUser.uid)
             .doc("${data.url}".replaceAll("/", "<"))
             .update({
                 "episodeInfo": firebase.firestore.FieldValue.arrayRemove({
@@ -238,9 +240,9 @@
                         console.log("Document data:", doc.data());
                         let info = doc.data().episodeInfo.map(getUrl);
                         console.log(info);
-                        $('#table').bootstrapTable('checkBy', {field: 'url', values: info});
-                        $('#table').on('page-change.bs.table', function (number, size) {
-                            $('#table').bootstrapTable('checkBy', {field: 'url', values: info});
+                        table.bootstrapTable('checkBy', {field: 'url', values: info});
+                        table.on('page-change.bs.table', function (number, size) {
+                            table.bootstrapTable('checkBy', {field: 'url', values: info});
                         });
                     } else {
                         // doc.data() will be undefined in this case
