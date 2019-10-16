@@ -74,4 +74,7 @@ dependencies {
     implementation "io.ktor:ktor-client-apache:$ktor_version"
     implementation "io.ktor:ktor-client-jetty:$ktor_version"
     compile "com.dorkbox:Notify:3.7"
+    compile 'com.google.firebase:firebase-admin:6.10.0'
+    compile "com.google.cloud:google-cloud-firestore:+"
+
 }

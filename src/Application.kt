@@ -3,6 +3,10 @@
 package com.example
 
 import com.fasterxml.jackson.databind.SerializationFeature
+import com.google.auth.oauth2.GoogleCredentials
+import com.google.firebase.FirebaseApp
+import com.google.firebase.FirebaseOptions
+import com.google.firebase.cloud.FirestoreClient
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import dorkbox.notify.Notify
@@ -54,9 +58,11 @@ import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.substring
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.io.File
+import java.io.FileInputStream
 import java.text.SimpleDateFormat
 import java.time.Duration
 import java.util.concurrent.TimeUnit
+
 
 fun main() {
     val env = applicationEngineEnvironment {
@@ -82,6 +88,40 @@ fun main() {
     Thread.currentThread().join()
 }
 
+data class FirebaseEpisode(
+    val name: String? = null,
+    val url: String? = null
+)
+
+data class FirebaseShow(
+    val name: String? = null,
+    val url: String? = null,
+    var showNum: Int = 0,
+    val episodeInfo: List<FirebaseEpisode>? = null
+)
+
+fun getFromFirebase() {
+    // Use the application default credentials
+    val serviceAccount = FileInputStream("resources/database/chesstest-3cd2a-firebase-adminsdk-5ytkb-3508b44064.json")
+    val credentials = GoogleCredentials.fromStream(serviceAccount)
+    val options = FirebaseOptions.Builder()
+        .setCredentials(credentials)
+        .setDatabaseUrl("https://chesstest-3cd2a.firebaseio.com")
+        .build()
+    FirebaseApp.initializeApp(options)
+
+    val db = FirestoreClient.getFirestore()
+
+    val ids = db.listCollections().map { it.id }
+    val showInfos = db.listCollections().map { it.get().get().toObjects(FirebaseShow::class.java) }
+
+    prettyLog(ids)
+    prettyLog("First id: ${ids[0]}: " + showInfos[0].toPrettyJson())
+    prettyLog("Second id: ${ids[1]}:" + showInfos[1].toPrettyJson())
+
+
+}
+
 fun Application.module() {
     System.setProperty("https.protocols", "TLSv1.2,TLSv1.1,SSLv3")
     //prettyLog("${System.getenv("JDBC_DATABASE_URL")} and ${System.getenv("KTOR_ENV")}")
@@ -94,15 +134,19 @@ fun Application.module() {
 
     val shows = ShowApi.getAll().toMutableList()
 
+    GlobalScope.launch {
+        getFromFirebase()
+    }
+
     val file = File("resources/database/movie.json")
-    if(file.exists()) {
+    if (file.exists()) {
         try {
             val list = Gson().fromJson<MutableList<ShowInfo>>(
                 file.readText(),
                 object : TypeToken<MutableList<ShowInfo>>() {}.type
             )
             shows.addAll(list)
-        } catch(e: Exception) {
+        } catch (e: Exception) {
 
         }
     }
