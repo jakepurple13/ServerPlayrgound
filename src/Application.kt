@@ -7,6 +7,8 @@ import com.google.auth.oauth2.GoogleCredentials
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.cloud.FirestoreClient
+import com.google.firebase.messaging.FirebaseMessaging
+import com.google.firebase.messaging.Message
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import dorkbox.notify.Notify
@@ -116,9 +118,29 @@ fun getFromFirebase() {
     val showInfos = db.listCollections().map { it.get().get().toObjects(FirebaseShow::class.java) }
 
     prettyLog(ids)
-    prettyLog("First id: ${ids[0]}: " + showInfos[0].toPrettyJson())
-    prettyLog("Second id: ${ids[1]}:" + showInfos[1].toPrettyJson())
+    //prettyLog("First id: ${ids[0]}: " + showInfos[0].toPrettyJson())
+    //prettyLog("Second id: ${ids[1]}:" + showInfos[1].toPrettyJson())
 
+    val recent = ShowApi.getAllRecent()
+
+    val both = recent.intersect(showInfos.flatten().distinctBy { it.url }) { one, two -> one.url == two.url }
+
+    prettyLog(both.toPrettyJson())
+
+    val listOfMessage = arrayListOf<Message>()
+
+    both.forEach {
+        val message = Message.builder()
+            .putData("show", it.name)
+            .setTopic(it.url)
+            .build()
+        listOfMessage += message
+    }
+
+    // Send a message to the devices subscribed to the provided topic.
+    val response = FirebaseMessaging.getInstance().sendAll(listOfMessage)
+    // Response is a message ID string.
+    prettyLog("Successfully sent message: $response")
 
 }
 

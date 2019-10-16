@@ -20,9 +20,7 @@ private val names = listOf(
 
 fun randomName(): String = names.random()
 
-//inline fun <reified T : Enum<T>> randomEnum() = enumValues<T>().random()
-
-//inline fun <reified T : Enum<T>> KClass<T>.random() = enumValues<T>().random()
+fun <T, U> List<T>.intersect(uList: List<U>, filterPredicate: (T, U) -> Boolean) = filter { m -> uList.any { filterPredicate(m, it) } }
 
 fun <T> MutableList<T>.randomRemove(): T {
     return removeAt(Random.nextInt(0, size))
