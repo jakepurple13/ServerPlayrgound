@@ -23,8 +23,28 @@ class ApplicationTest {
 
     @Test
     fun putMovie() {
-        val q = ShowApi(Source.LIVE_ACTION_MOVIES).showInfoList
-        prettyLog(q.toPrettyJson())
+        //val q = ShowApi(Source.RECENT_ANIME).showInfoList
+        //prettyLog(q.toPrettyJson())
+
+        //val f = ShowApi.getSources(Source.RECENT_LIVE_ACTION).getEpisodeApi(0).episodeList
+        //prettyLog(f.toPrettyJson())
+        //puid=179694722
+        val show = ShowInfo("Dude, Where's My Car?", "https://www3.putlocker.fyi/dude-wheres-my-car/", ShowType.MOVIE)
+        val ep = EpisodeApi(show)
+        prettyLog(ep)
+        val v = VideoLinkApi(ep.episodeList[0].url)
+        prettyLog(v.getVideoLink())
+        //val s = VideoLinkApi("https://www3.putlocker.fyi/dude-wheres-my-car/").getVideoLink()
+        //prettyLog(s)
+        //val s1 = VideoLinkApi("https://www3.putlocker.fyi/embed-src/19875").getVideoLink()
+        //prettyLog(s1)
+
+        /*val json = Jsoup.connect("https://www3.putlocker.fyi/wp-json/oembed/1.0/embed?url=https%3A%2F%2Fwww3.putlocker.fyi%2Fdude-wheres-my-car%2F").get()
+        val xml = Jsoup.connect("https://www3.putlocker.fyi/wp-json/oembed/1.0/embed?url=https%3A%2F%2Fwww3.putlocker.fyi%2Fdude-wheres-my-car%2F&amp;format=xml").get()
+
+        prettyLog(json)
+        prettyLog(xml)*/
+
     }
 
     fun <T> Any.check(vararg checkAgainst: T): Boolean {

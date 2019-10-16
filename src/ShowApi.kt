@@ -11,6 +11,11 @@ import java.io.InputStreamReader
 import java.net.SocketTimeoutException
 import java.net.URL
 
+enum class ShowType {
+    MOVIE,
+    SHOW
+}
+
 enum class Source(val link: String, val recent: Boolean = false, var movie: Boolean = false) {
     //ANIME("http://www.animeplus.tv/anime-list"),
     ANIME("https://www.gogoanime1.com/home/anime-list"),
@@ -47,7 +52,7 @@ enum class Source(val link: String, val recent: Boolean = false, var movie: Bool
 /**
  * Info about the show, name and url
  */
-open class ShowInfo(val name: String, val url: String) {
+open class ShowInfo(val name: String, val url: String, internal var type: ShowType = ShowType.SHOW) {
     override fun toString(): String {
         return "$name: $url"
     }
@@ -123,7 +128,7 @@ class ShowApi(private val source: Source) {
                         val listOfStuff = document.allElements.select("div.col-6")
                         for (i in listOfStuff) {
                             val url = i.select("a.thumbnail").attr("abs:href")
-                            list.add(ShowInfo(i.select("span.mov_title").text(), url))
+                            list.add(ShowInfo(i.select("span.mov_title").text(), url, ShowType.MOVIE))
                         }
                     }
                     getMovieFromPage(page)
@@ -138,7 +143,7 @@ class ShowApi(private val source: Source) {
                 val d = doc.select("a.az_ls_ent")
                 val listOfShows = arrayListOf<ShowInfo>()
                 for (i in d) {
-                    listOfShows += ShowInfo(i.text(), i.attr("abs:href"))
+                    listOfShows += ShowInfo(i.text(), i.attr("abs:href"), ShowType.SHOW)
                 }
                 listOfShows
             }
@@ -147,12 +152,7 @@ class ShowApi(private val source: Source) {
             val listOfStuff = lists.select("td").select("a[href^=http]")
             val listOfShows = arrayListOf<ShowInfo>()
             for (element in listOfStuff) {
-                listOfShows.add(
-                    ShowInfo(
-                        element.text(),
-                        element.attr("abs:href")
-                    )
-                )
+                listOfShows.add(ShowInfo(element.text(), element.attr("abs:href"), if(source.movie) ShowType.MOVIE else ShowType.SHOW))
             }
             listOfShows.sortBy { it.name }
             listOfShows
@@ -167,7 +167,8 @@ class ShowApi(private val source: Source) {
             listOfShows.add(
                 ShowInfo(
                     element.text(),
-                    element.select("a[href^=http]").attr("abs:href")
+                    element.select("a[href^=http]").attr("abs:href"),
+                    ShowType.SHOW
                 )
             )
         }
@@ -183,6 +184,9 @@ class ShowApi(private val source: Source) {
             )
         } as ArrayList<ShowInfo>
         list.sortBy { it.name }
+        list.forEach {
+            it.type = ShowType.MOVIE
+        }
         return list
     }
 
@@ -345,14 +349,24 @@ class EpisodeApi(val source: ShowInfo, timeOut: Int = 10000) {
             var listOfShows = arrayListOf<EpisodeInfo>()
             when {
                 source.url.contains("putlocker") -> {
-                    val rowList = doc.select("div.col-lg-12").select("div.row")
-                    val episodes = rowList.select("a.btn-episode")
-                    for (i in episodes) {
-                        val ep = EpisodeInfo(
-                            i.attr("title"),
-                            "https://www.putlocker.fyi/embed-src/${i.attr("data-pid")}"
-                        )//i.attr("abs:href"))
-                        listOfShows.add(ep)
+                    if(source.type == ShowType.MOVIE) {
+                        val info = "var post = \\{\"id\":\"(.*?)\"\\};".toRegex().toPattern().matcher(doc.html())
+                        if(info.find()) {
+                            listOfShows.add(EpisodeInfo(
+                                name,
+                                "https://www.putlocker.fyi/embed-src/${info.group(1)}"
+                            ))
+                        }
+                    } else {
+                        val rowList = doc.select("div.col-lg-12").select("div.row")
+                        val episodes = rowList.select("a.btn-episode")
+                        for (i in episodes) {
+                            val ep = EpisodeInfo(
+                                i.attr("title"),
+                                "https://www.putlocker.fyi/embed-src/${i.attr("data-pid")}"
+                            )
+                            listOfShows.add(ep)
+                        }
                     }
                 }
                 source.url.contains("gogoanime") -> {
