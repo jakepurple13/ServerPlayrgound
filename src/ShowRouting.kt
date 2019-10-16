@@ -8,12 +8,10 @@ import io.ktor.routing.get
 import io.ktor.routing.route
 import kotlinx.html.*
 import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 
-fun Route.api(db: Database) {
+fun Route.api(db: ShowDBApi) {
     route("/show/quiz") {
         get {
             addQuiz(
@@ -24,7 +22,7 @@ fun Route.api(db: Database) {
                 )
             )
         }
-        addShowQuiz(db)
+        addShowQuiz(db.db)
     }
     route("/api") {
         get("/about") {
@@ -90,23 +88,17 @@ fun Route.api(db: Database) {
     }
 }
 
-fun Route.webApi(db: Database) {
+fun Route.webApi(db: ShowDBApi) {
     route("/web") {
         get("/all.json") {
-            var list = listOf<ShowInfo>()
-            transaction(db) {
-                list = Shows.selectAll().map { ShowInfo(it[Shows.name], it[Shows.url]) }.sortedBy { it.name }
-            }
+            val list = db.getAll()
             call.respond(list)
         }
         get("/allEpisodes.json") {
-            call.respond(getAllEpisodes(db))
+            call.respond(getAllEpisodes(db.db))
         }
         get("/nameAll.json") {
-            var list = listOf<String>()
-            transaction(db) {
-                list = Shows.selectAll().map { it[Shows.name] }.sortedBy { it }
-            }
+            val list = db.getAll().map { it.name }.sortedBy { it }
             call.respond(list)
         }
         get("/r{type}.json") {
@@ -142,46 +134,18 @@ fun getAllEpisodes(db: Database): List<ChatServer.EpisodeApiInfo> {
     return list
 }
 
-fun Route.userApi(db: Database) {
+fun Route.userApi(db: ShowDBApi) {
     route("/user") {
         get("/all.json") {
-            var list = listOf<ShowInfo>()
-            transaction(db) {
-                list = Shows.selectAll().map { ShowInfo(it[Shows.name], it[Shows.url]) }.sortedBy { it.name }
-                //list = Show.all().sortedBy { it.name }.map { ShowInfo(it.name, it.url) }
-            }
+            var list = db.getAll()
             call.respond(mapOf("shows" to list))
         }
         get("/allEpisodes.json") {
-            call.respond(mapOf("shows" to getAllEpisodes(db)))
+            call.respond(mapOf("shows" to getAllEpisodes(db.db)))
         }
         get("/nsi/{name}.json") {
             val name = call.parameters["name"]!!
-
-            val source = when (name[0]) {
-                'p' -> "putlocker"
-                'g' -> "gogoanime"
-                'a' -> "animetoon"
-                else -> ""
-            }
-
-            var episode = EpisodeApiInfo()
-
-            transaction(db) {
-                val e = Episodes.select {
-                    Episodes.url like "%$source%" and (Episodes.url like "%${name.substring(1)}%")
-                }.toList()
-                val i = e[0]
-                val l = EpisodeLists.select { EpisodeLists.episode eq i[Episodes.id] }
-                    .map { EpListInfo(it[EpisodeLists.name], it[EpisodeLists.url]) }
-                episode = EpisodeApiInfo(
-                    i[Episodes.name],
-                    i[Episodes.image],
-                    i[Episodes.url],
-                    i[Episodes.description],
-                    l
-                )
-            }
+            val episode = db.getEpisodeInfo(name)
             call.respond(mapOf("EpisodeInfo" to episode))
         }
         get("/r{type}.json") {
@@ -201,25 +165,17 @@ fun Route.userApi(db: Database) {
     }
 }
 
-fun Route.getShowType(db: Database) {
+fun Route.getShowType(db: ShowDBApi) {
     get("/t{type}.json") {
         val type = call.parameters["type"]!!
-        var list = listOf<ShowInfo>()
-        transaction(db) {
-            list = Shows.select { Shows.url like "%$type%" }.map { ShowInfo(it[Shows.name], it[Shows.url]) }
-                .sortedBy { it.name }
-        }
+        val list = db.getType(type)
         call.respond(list)
     }
 }
 
-fun Route.randomShow(db: Database) {
+fun Route.randomShow(db: ShowDBApi) {
     get("/random.json") {
-        var showInfo = ShowInfo("", "")
-        transaction(db) {
-            showInfo = Shows.selectAll().map { ShowInfo(it[Shows.name], it[Shows.url]) }.random()
-        }
-        call.respond(showInfo)
+        call.respond(db.randomShow())
     }
 }
 

@@ -49,7 +49,6 @@ import kotlinx.html.p
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.substring
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -96,7 +95,7 @@ fun Application.module() {
     installing(simpleJwt)
     timeSave(highScoreFile, db)
     database(db)
-    routing(db, simpleJwt)
+    routing(ShowDBApi(db, ShowApi.getAll()), simpleJwt)
 }
 
 private fun Application.timeSave(highScoreFile: File, db: Database) {
@@ -205,7 +204,7 @@ private fun Application.installing(simpleJwt: SimpleJWT) {
     }
 }
 
-private fun Application.routing(db: Database, simpleJwt: SimpleJWT) {
+private fun Application.routing(dbApi: ShowDBApi, simpleJwt: SimpleJWT) {
     routing {
         post("/login-register") {
             val post = call.receive<LoginRegister>()
@@ -229,7 +228,7 @@ private fun Application.routing(db: Database, simpleJwt: SimpleJWT) {
 
         firebaseRoute()
         chatRoute()
-        api(db)
+        api(dbApi)
         musicGameApi()
 
         route("/nsi/{name}") {
@@ -237,35 +236,8 @@ private fun Application.routing(db: Database, simpleJwt: SimpleJWT) {
                 prettyLog(call.request.origin.remoteHost)
                 val name = call.parameters["name"]!!
 
-                var episode: EpisodeApiInfo? = null
+                val episode: EpisodeApiInfo? = dbApi.getEpisodeInfo(name)
 
-                val source = when (name[0]) {
-                    'p' -> "putlocker"
-                    'g' -> "gogoanime"
-                    'a' -> "animetoon"
-                    else -> ""
-                }
-                transaction(db) {
-                    try {
-                        val e = Episodes.select {
-                            Episodes.url like "%$source%" and (Episodes.url like "%${name.substring(1)}%")
-                        }.toList()
-
-                        if (e.isNotEmpty()) {
-                            val list = EpisodeLists.select { EpisodeLists.episode eq e[0][Episodes.id] }
-                                .map { EpListInfo(it[EpisodeLists.name], it[EpisodeLists.url]) }
-                            episode = EpisodeApiInfo(
-                                e[0][Episodes.name],
-                                e[0][Episodes.image],
-                                e[0][Episodes.url],
-                                e[0][Episodes.description],
-                                list
-                            )
-                        }
-                    } catch (ignored: Exception) {
-
-                    }
-                }
                 if (episode != null)
                     call.respond(FreeMarkerContent("epview.ftl", mapOf("data" to episode)))
                 else
@@ -300,13 +272,13 @@ private fun Application.routing(db: Database, simpleJwt: SimpleJWT) {
                 when (call.parameters["action"]!!) {
                     "update" -> {
                         getOrUpdateShows {
-                            updateShows(db)
+                            updateShows(dbApi)
                         }
                     }
                     "get" -> {
                         getOrUpdateShows {
                             createEverything(
-                                db,
+                                dbApi.db,
                                 ShowApi.getSources(
                                     Source.ANIME,
                                     Source.DUBBED,
@@ -337,7 +309,7 @@ private fun Application.routing(db: Database, simpleJwt: SimpleJWT) {
                 }?.map { "$it" }
                 if (!checkLevel.isNullOrEmpty()) {
                     var list = listOf<EpisodeApiInfo>()
-                    transaction(db) {
+                    transaction(dbApi.db) {
                         list = Episodes.select {
                             try {
                                 Episodes.name.substring(1, 1) inList checkLevel
@@ -369,7 +341,7 @@ private fun Application.routing(db: Database, simpleJwt: SimpleJWT) {
             }
             get("/old") {
                 var list = listOf<Show>()
-                transaction(db) {
+                transaction(dbApi.db) {
                     list = Show.all().sortedBy { it.name }
                 }
                 call.respond(

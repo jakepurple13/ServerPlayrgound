@@ -24,8 +24,8 @@ object DbSettings {
             isProd -> Database.connect(System.getenv("JDBC_DATABASE_URL"), driver = "org.postgresql.Driver")
             else -> Database.connect("jdbc:sqlite:$dbPath", "org.sqlite.JDBC")
         }*/
-        Database.connect(System.getenv("JDBC_DATABASE_URL"), driver = "org.postgresql.Driver")
-        //Database.connect("jdbc:sqlite:$dbPath", "org.sqlite.JDBC")
+        //Database.connect(System.getenv("JDBC_DATABASE_URL"), driver = "org.postgresql.Driver")
+        Database.connect("jdbc:sqlite:$dbPath", "org.sqlite.JDBC")
     }
 }
 
@@ -239,15 +239,15 @@ fun addNewShow(db: Database, show: ShowInfo) {
     }
 }
 
-fun updateShows(db: Database) = GlobalScope.launch {
-    transaction(db) {
+fun updateShows(db: ShowDBApi) = GlobalScope.launch {
+    transaction(db.db) {
 
         val list = ShowApi.getAllRecent()
 
         for ((j, i) in list.withIndex()) {
             val s = Show.find { Shows.url eq i.url }.toList()
             if (s.isEmpty()) {
-                addNewShow(db, i)
+                addNewShow(db.db, i)
                 continue
             }
             try {
