@@ -33,6 +33,7 @@
             <option value='/api/web/ra.json'>Recent Anime</option>
             <option value='/api/web/rl.json'>Recent TV Shows</option>
             <option value='/api/web/rc.json'>Recent Cartoon</option>
+            <option value='/api/web/rall.json'>All Recent</option>
             <option value='/api/web/tgogoanime.json'>Anime</option>
             <option value='/api/web/tputlocker.json'>TV Shows</option>
             <option value='/api/web/ttoon.json'>Cartoon</option>

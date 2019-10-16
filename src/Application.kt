@@ -4,6 +4,7 @@ package com.example
 
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import dorkbox.notify.Notify
 import freemarker.cache.ClassTemplateLoader
 import io.ktor.application.*
@@ -91,11 +92,26 @@ fun Application.module() {
 
     val highScoreFile = File("resources/database/highscores.json")
 
+    val shows = ShowApi.getAll().toMutableList()
+
+    val file = File("resources/database/movie.json")
+    if(file.exists()) {
+        try {
+            val list = Gson().fromJson<MutableList<ShowInfo>>(
+                file.readText(),
+                object : TypeToken<MutableList<ShowInfo>>() {}.type
+            )
+            shows.addAll(list)
+        } catch(e: Exception) {
+
+        }
+    }
+
     monitoring(highScoreFile)
     installing(simpleJwt)
     timeSave(highScoreFile, db)
     database(db)
-    routing(ShowDBApi(db, ShowApi.getAll()), simpleJwt)
+    routing(ShowDBApi(db, shows.sortedBy { it.name }), simpleJwt)
 }
 
 private fun Application.timeSave(highScoreFile: File, db: Database) {
@@ -116,6 +132,27 @@ private fun Application.timeSave(highScoreFile: File, db: Database) {
 }
 
 private fun Application.database(db: Database) {
+
+    /*GlobalScope.launch {
+        val file = File("resources/database/movie.json")
+        if (!file.exists()) {
+            file.createNewFile()
+        }
+        val s = timeAction {
+            GlobalScope.launch {
+                val q = ShowApi.getAllMovies()
+                file.writeText(q.toPrettyJson())
+            }
+        }
+        prettyLog("${s.first.toHttpDateString()} : ${s.second}")
+        Notify.create()
+            .title("Finished")
+            .text("Finished Getting Movies")
+            .darkStyle()
+            .hideAfter(3000)
+            .show()
+    }*/
+
     GlobalScope.launch {
         //val cssGridLayout = "https://grid.layoutit.com/"
         //createEverything(db, ShowApi.getSources(Source.ANIME, Source.DUBBED, Source.CARTOON, Source.CARTOON_MOVIES, Source.LIVE_ACTION))

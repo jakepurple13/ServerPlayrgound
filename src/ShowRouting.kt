@@ -101,17 +101,7 @@ fun Route.webApi(db: ShowDBApi) {
             val list = db.getAll().map { it.name }.sortedBy { it }
             call.respond(list)
         }
-        get("/r{type}.json") {
-            when (call.parameters["type"]!!) {
-                "c" -> Source.RECENT_CARTOON
-                "a" -> Source.RECENT_ANIME
-                "l" -> Source.RECENT_LIVE_ACTION
-                else -> null
-            }?.let {
-                val s = ShowApi(it).showInfoList
-                call.respond(s)
-            }
-        }
+        getRecentShowType()
         getShowType(db)
         randomShow(db)
     }
@@ -137,7 +127,7 @@ fun getAllEpisodes(db: Database): List<ChatServer.EpisodeApiInfo> {
 fun Route.userApi(db: ShowDBApi) {
     route("/user") {
         get("/all.json") {
-            var list = db.getAll()
+            val list = db.getAll()
             call.respond(mapOf("shows" to list))
         }
         get("/allEpisodes.json") {
@@ -148,18 +138,7 @@ fun Route.userApi(db: ShowDBApi) {
             val episode = db.getEpisodeInfo(name)
             call.respond(mapOf("EpisodeInfo" to episode))
         }
-        get("/r{type}.json") {
-            when (call.parameters["type"]!!) {
-                "c" -> Source.RECENT_CARTOON
-                "a" -> Source.RECENT_ANIME
-                "l" -> Source.RECENT_LIVE_ACTION
-                "all" -> Source.DUBBED
-                else -> null
-            }?.let {
-                val s = if (it == Source.DUBBED) ShowApi.getAllRecent() else ShowApi(it).showInfoList
-                call.respond(mapOf("shows" to synchronized(s) { s.toList() }))
-            }
-        }
+        getRecentShowType { mapOf("shows" to synchronized(it) { it.toList() }) }
         getShowType(db)
         randomShow(db)
     }
@@ -170,6 +149,21 @@ fun Route.getShowType(db: ShowDBApi) {
         val type = call.parameters["type"]!!
         val list = db.getType(type)
         call.respond(list)
+    }
+}
+
+fun Route.getRecentShowType(showList: (List<ShowInfo>) -> Any = { it }) {
+    get("/r{type}.json") {
+        when (call.parameters["type"]!!) {
+            "c" -> Source.RECENT_CARTOON
+            "a" -> Source.RECENT_ANIME
+            "l" -> Source.RECENT_LIVE_ACTION
+            "all" -> Source.DUBBED
+            else -> null
+        }?.let {
+            val s = if (it == Source.DUBBED) ShowApi.getAllRecent() else ShowApi(it).showInfoList
+            call.respond(showList(s))
+        }
     }
 }
 

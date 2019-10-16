@@ -21,6 +21,12 @@ class ApplicationTest {
         ChatServer.MessageType::class.random().apply { prettyLog(this) }*/
     }
 
+    @Test
+    fun putMovie() {
+        val q = ShowApi(Source.LIVE_ACTION_MOVIES).showInfoList
+        prettyLog(q.toPrettyJson())
+    }
+
     fun <T> Any.check(vararg checkAgainst: T): Boolean {
         for(c in checkAgainst) {
             if(this != c) {

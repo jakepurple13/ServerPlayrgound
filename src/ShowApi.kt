@@ -116,8 +116,9 @@ class ShowApi(private val source: Source) {
                 val alphabet = doc.allElements.select("ul.pagination-az").select("a.page-link")
                 for (p in alphabet) {
                     println(p.attr("abs:href") + " and list size is ${list.size}")
-                    val page = Jsoup.connect(p.attr("abs:href")).get().allElements.select("li.page-item")
-                    val lastPage = page[page.size - 2].text().toInt()
+                    val page = Jsoup.connect(p.attr("abs:href")).get()
+                    val listPage = page.allElements.select("li.page-item")
+                    val lastPage = listPage[listPage.size - 2].text().toInt()
                     fun getMovieFromPage(document: Document) {
                         val listOfStuff = document.allElements.select("div.col-6")
                         for (i in listOfStuff) {
@@ -125,9 +126,11 @@ class ShowApi(private val source: Source) {
                             list.add(ShowInfo(i.select("span.mov_title").text(), url))
                         }
                     }
-                    getMovieFromPage(doc)
+                    getMovieFromPage(page)
                     for (i in 2..lastPage) {
-                        getMovieFromPage(Jsoup.connect(Source.LIVE_ACTION_MOVIES.link + "page/$i").get())
+                        getMovieFromPage(
+                            Jsoup.connect("${Source.LIVE_ACTION_MOVIES.link}page/$i/${p.attr("abs:href").split("/").last()}").get()
+                        )
                     }
                 }
                 list
