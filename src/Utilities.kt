@@ -53,7 +53,7 @@ fun prettyLog(msg: Any?) {
     val stackTraceElement = Thread.currentThread().stackTrace
 
     val elements = listOf(*stackTraceElement)
-    val wanted = elements.filter { it.className.contains("example") && !it.methodName.contains("prettyLog") }
+    val wanted = elements.filter { it.className.contains("example", true) && !it.methodName.contains("prettyLog") }
 
     var loc = "\n"
 

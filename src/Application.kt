@@ -7,8 +7,6 @@ import com.google.auth.oauth2.GoogleCredentials
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
 import com.google.firebase.cloud.FirestoreClient
-import com.google.firebase.messaging.FirebaseMessaging
-import com.google.firebase.messaging.Message
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import dorkbox.notify.Notify
@@ -67,6 +65,7 @@ import java.util.concurrent.TimeUnit
 
 
 fun main() {
+    System.setProperty("https.protocols", "TLSv1.2,TLSv1.1,SSLv3")
     val env = applicationEngineEnvironment {
         module {
             module()
@@ -102,7 +101,7 @@ data class FirebaseShow(
     val episodeInfo: List<FirebaseEpisode>? = null
 )
 
-fun getFromFirebase() {
+fun Application.firebase() {
     // Use the application default credentials
     val serviceAccount = FileInputStream("resources/database/chesstest-3cd2a-firebase-adminsdk-5ytkb-3508b44064.json")
     val credentials = GoogleCredentials.fromStream(serviceAccount)
@@ -121,13 +120,15 @@ fun getFromFirebase() {
     //prettyLog("First id: ${ids[0]}: " + showInfos[0].toPrettyJson())
     //prettyLog("Second id: ${ids[1]}:" + showInfos[1].toPrettyJson())
 
+    //FirebaseMessaging.getInstance().subscribeToTopic(ids, "test")
+
     val recent = ShowApi.getAllRecent()
 
     val both = recent.intersect(showInfos.flatten().distinctBy { it.url }) { one, two -> one.url == two.url }
 
     prettyLog(both.toPrettyJson())
 
-    val listOfMessage = arrayListOf<Message>()
+    /*val listOfMessage = arrayListOf<Message>()
 
     both.forEach {
         val message = Message.builder()
@@ -140,12 +141,11 @@ fun getFromFirebase() {
     // Send a message to the devices subscribed to the provided topic.
     val response = FirebaseMessaging.getInstance().sendAll(listOfMessage)
     // Response is a message ID string.
-    prettyLog("Successfully sent message: $response")
+    prettyLog("Successfully sent message: $response")*/
 
 }
 
 fun Application.module() {
-    System.setProperty("https.protocols", "TLSv1.2,TLSv1.1,SSLv3")
     //prettyLog("${System.getenv("JDBC_DATABASE_URL")} and ${System.getenv("KTOR_ENV")}")
 
     val db = DbSettings.db
@@ -157,7 +157,7 @@ fun Application.module() {
     val shows = ShowApi.getAll().toMutableList()
 
     GlobalScope.launch {
-        getFromFirebase()
+        //firebase()
     }
 
     val file = File("resources/database/movie.json")
