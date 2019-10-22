@@ -23,6 +23,28 @@ class ApplicationTest {
     }
 
     @Test
+    fun project() {
+        prettyLog("<body(.*?)>".findRegex(htmlInfo))
+        prettyLog("abbcccddddeeeee".mostCommonCharacter())
+        prettyLog("abcde".mostCommonCharacter())
+        prettyLog(htmlInfo.mostCommonCharacter())
+        prettyLog(htmlInfo.characterMapper())
+        prettyLog(htmlInfo.wordMapper())
+    }
+
+    private fun String.mostCommonCharacter(): Pair<Char, Int>? =
+        replace(" ", "").groupingBy { it }.eachCount().maxBy { it.value }?.toPair()
+
+    private fun String.characterMapper() =
+        replace(" ", "").groupingBy { it }.eachCount().map { Pair(it.key, it.value) }.sortedByDescending { it.second }.toMap()
+
+    private fun String.wordMapper() =
+        split(" ").groupingBy { it }.eachCount().map { Pair(it.key, it.value) }.sortedByDescending { it.second }.toMap()
+
+    private fun String.findRegex(string: String, groupNumber: Int = 1) =
+        toRegex().find(string)?.groupValues?.getOrNull(groupNumber)
+
+    @Test
     fun putMovie() {
         //val q = ShowApi(Source.RECENT_ANIME).showInfoList
         //prettyLog(q.toPrettyJson())
@@ -45,16 +67,6 @@ class ApplicationTest {
         prettyLog(xml)*/
         val video = Jsoup.connect("https://oload.tv/embed/SF0MjzSOY0I/History.of.the.World.Part.1.1981.mp4").get()
         prettyLog(video)
-
-    }
-
-    fun <T> Any.check(vararg checkAgainst: T): Boolean {
-        for(c in checkAgainst) {
-            if(this != c) {
-                return false
-            }
-        }
-        return true
     }
 
     @Test
@@ -132,4 +144,77 @@ class ApplicationTest {
             }
         }
     }
+
+    private val htmlInfo = """
+    <!doctype html>
+    <html>
+    
+    <head>
+        <!--should use the same as the default extension favicon-->
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link id="gsFavicon" rel="icon" href="img/ic_suspendy_16x16.png" />
+        <link rel="stylesheet" type="text/css" href="css/suspended.css">
+        <!--no point localising the gsTitle as it requires js to do so, and we may as well just set the real title instead-->
+        <!--ideally it will show no title at all until the real one loads, so we use the ZERO WIDTH NO-BREAK SPACE character-->
+        <title id="gsTitle">...</title>
+        <meta name="google" content="notranslate">
+    </head>
+    
+    <body class="suspended-page hide-initially">
+    
+        <script type="text/html" id="previewTemplate">
+        <img id="gsPreviewImg" class="gsPreviewImg" />
+        </script>
+    
+        <script type="text/html" id="donateTemplate">
+            <link id="donateCss" rel="stylesheet" type="text/css" href="css/donate.css">
+            <img id="dudePopup" src="img/suspendy-guy.png">
+            <div id="donateBubble" class="donateBubble">
+                <p class="donate-text" data-i18n="__MSG_html_suspended_donation_question__"></p>
+                <div id="donateButtons" class="donateButtons" />
+            </div>
+        </script>
+    
+        <script type="text/html" id="toastTemplate">
+            <div class="toast-content">
+                <h1 data-i18n="__MSG_html_suspended_toast_not_connected__"></h1>
+                <p data-i18n="__MSG_html_suspended_toast_reload_disabled__"></p>
+            </div>
+        </script>
+    
+        <div id="gsTopBar" class="gsTopBar">
+            <div id="gsTopBarTitleWrap" class="hideOverflow gsTopBarTitleWrap">
+                <div id="faviconWrap" class="faviconWrap">
+                    <img id="gsTopBarImg" class="gsTopBarImg" />
+                </div>
+                <span id="gsTopBarTitle" class="gsTopBarTitle"></span>
+            </div>
+            <div class="hideOverflow">
+                <a id="gsTopBarUrl" class="gsTopBarUrl"></a>
+            </div>
+        </div>
+    
+        <div id="suspendedMsg" class="suspendedMsg">
+            <div class="snoozyWrapper">
+                <img id="snoozyImg" src="img/snoozy_tab.svg" />
+                <div id="snoozySpinner"></div>
+            </div>
+            <div class="suspendedTextWrap">
+                <div id="suspendedMsg-instr" class="suspendedMsg-instr">
+                    <div data-i18n="__MSG_html_suspended_click_to_reload__"></div>
+                </div>
+                <div class="suspendedMsg-shortcut">
+                    <span id="hotkeyWrapper" class="hotkeyWrapper"></span>
+                </div>
+            </div>
+        </div>
+        <div class="watermark">
+            The Great Suspender
+        </div>
+    
+        <div id="refreshSpinner"></div>
+    </body>
+    
+    </html>
+    """
 }
