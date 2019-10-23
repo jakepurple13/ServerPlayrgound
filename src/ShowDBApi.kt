@@ -1,6 +1,9 @@
 package com.example
 
-import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 
 class ShowDBApi(val db: Database, val showList: List<ShowInfo>) {
@@ -44,9 +47,26 @@ class ShowDBApi(val db: Database, val showList: List<ShowInfo>) {
                 }
             }
             false -> {
+                val checker: (EpisodeApiInfo) -> Boolean = if(checkLevel.contains("0")) {
+                    {
+                        !it.name[0].isLetter()
+                    }
+                } else {
+                    {
+                        it.name[0].toString() in checkLevel
+                    }
+                }
                 var list = listOf<EpisodeApiInfo>()
                 transaction(db) {
-                    list = Episodes.select {
+                    list = Episodes.selectAll().map {
+                        EpisodeApiInfo(
+                            it[Episodes.name],
+                            it[Episodes.image],
+                            it[Episodes.url],
+                            it[Episodes.description]
+                        )
+                    }.filter(checker)
+                    /*list = Episodes.select {
                         try {
                             Episodes.name.substring(1, 1) inList checkLevel
                         } catch (e: Exception) {
@@ -59,11 +79,11 @@ class ShowDBApi(val db: Database, val showList: List<ShowInfo>) {
                             it[Episodes.url],
                             it[Episodes.description]
                         )
-                    }.sortedBy { it.name }
+                    }*/
                 }
                 list
             }
-        }
+        }.sortedBy { it.name }
     }
 
     fun getType(type: String): List<ShowInfo> {
