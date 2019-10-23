@@ -54,8 +54,6 @@ import kotlinx.html.p
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.select
-import org.jetbrains.exposed.sql.substring
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.io.File
 import java.io.FileInputStream
@@ -406,29 +404,12 @@ private fun Application.routing(dbApi: ShowDBApi, simpleJwt: SimpleJWT) {
             get("/{level}") {
                 val level = call.parameters["level"]!!
                 val checkLevel = when (level.toLowerCase()) {
-                    "0-9" -> ('0'..'9')
+                    "0-9" -> ('0'..'9') + "." + "\""
                     in (('a'..'z') + ('A'..'Z')).map { "$it" } -> listOf(level.toLowerCase(), level.toUpperCase())
                     else -> null
                 }?.map { "$it" }
                 if (!checkLevel.isNullOrEmpty()) {
-                    var list = listOf<EpisodeApiInfo>()
-                    transaction(dbApi.db) {
-                        list = Episodes.select {
-                            try {
-                                Episodes.name.substring(1, 1) inList checkLevel
-                            } catch (e: Exception) {
-                                Episodes.name neq Episodes.name
-                            }
-                        }.map {
-                            EpisodeApiInfo(
-                                it[Episodes.name],
-                                it[Episodes.image],
-                                it[Episodes.url],
-                                it[Episodes.description]
-                            )
-                        }.sortedBy { it.name }
-                    }
-                    call.respond(FreeMarkerContent("table.ftl", mapOf("data" to list)))
+                    call.respond(FreeMarkerContent("table.ftl", mapOf("data" to dbApi.getAlphabet(checkLevel))))
                 } else {
                     notFound("Unable to Retrieve")
                 }

@@ -1,11 +1,13 @@
 package com.example
 
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import io.ktor.html.HtmlContent
 import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.runBlocking
 import kotlinx.html.*
 import kotlinx.html.stream.createHTML
-import org.jsoup.Jsoup
+import java.io.File
 import kotlin.collections.set
 import kotlin.test.Test
 
@@ -30,22 +32,58 @@ class ApplicationTest {
         prettyLog(htmlInfo.mostCommonCharacter())
         prettyLog(htmlInfo.characterMapper())
         prettyLog(htmlInfo.wordMapper())
+        prettyLog(htmlInfo.mostCommonWord())
+        prettyLog(loremIpsum.mostCommonCharacter())
+        prettyLog(loremIpsum.characterMapper())
+        prettyLog(loremIpsum.wordMapper())
+        prettyLog(loremIpsum.mostCommonWord())
     }
 
     private fun String.mostCommonCharacter(): Pair<Char, Int>? =
-        replace(" ", "").groupingBy { it }.eachCount().maxBy { it.value }?.toPair()
+        replace(" ", "")
+            .groupingBy { it }
+            .eachCount()
+            .maxBy { it.value }?.toPair()
+
+    private fun String.mostCommonWord(): Pair<String, Int>? =
+        split(" ")
+            .filter { it.isNotBlank() }
+            .groupingBy { it }
+            .eachCount()
+            .maxBy { it.value }?.toPair()
 
     private fun String.characterMapper() =
-        replace(" ", "").groupingBy { it }.eachCount().map { Pair(it.key, it.value) }.sortedByDescending { it.second }.toMap()
+        replace(" ", "")
+            .groupingBy { it }
+            .eachCount()
+            .map { Pair(it.key, it.value) }
+            .sortedByDescending { it.second }
+            .toMap()
 
     private fun String.wordMapper() =
-        split(" ").groupingBy { it }.eachCount().map { Pair(it.key, it.value) }.sortedByDescending { it.second }.toMap()
+        split(" ")
+            .filter { it.isNotBlank() }
+            .groupingBy { it }
+            .eachCount()
+            .map { Pair(it.key, it.value) }
+            .sortedByDescending { it.second }
+            .toMap()
 
     private fun String.findRegex(string: String, groupNumber: Int = 1) =
         toRegex().find(string)?.groupValues?.getOrNull(groupNumber)
 
     @Test
     fun putMovie() {
+        val list = Gson().fromJson<MutableList<ShowInfo>>(
+            File("resources/database/movie.json").readText(),
+            object : TypeToken<MutableList<ShowInfo>>() {}.type
+        )
+        val e = list.randomShow()
+        prettyLog(e)
+        val eList = e.episodeList
+        prettyLog(eList)
+        val v = VideoLinkApi(eList.random().url)
+        prettyLog(v.getVideoLink())
         //val q = ShowApi(Source.RECENT_ANIME).showInfoList
         //prettyLog(q.toPrettyJson())
 
@@ -65,8 +103,8 @@ class ApplicationTest {
         val xml = Jsoup.connect("https://www3.putlocker.fyi/embed-src/26499").get()
         prettyLog(json)
         prettyLog(xml)*/
-        val video = Jsoup.connect("https://oload.tv/embed/SF0MjzSOY0I/History.of.the.World.Part.1.1981.mp4").get()
-        prettyLog(video)
+        //val video = Jsoup.connect("https://oload.tv/embed/SF0MjzSOY0I/History.of.the.World.Part.1.1981.mp4").get()
+        //prettyLog(video)
     }
 
     @Test
@@ -144,6 +182,16 @@ class ApplicationTest {
             }
         }
     }
+
+    private val loremIpsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed turpis elit, dictum vel bibendum vitae, auctor pharetra sem. Nullam fermentum lacus et mollis mollis. Integer elementum placerat nulla non pharetra. In est quam, mollis eget metus ac, laoreet ornare nisi. In facilisis elit et turpis dictum, eu suscipit lorem ultrices. Nullam tempus aliquam neque, in accumsan ligula luctus a. Cras pretium neque non justo gravida dignissim. Proin congue blandit tempor. Sed accumsan leo eu malesuada vestibulum. Cras molestie porta lacus, eget posuere leo consequat in. Maecenas faucibus vulputate sem, eget venenatis erat lobortis sed. Nullam purus mi, feugiat at lorem non, ultricies rhoncus lorem. Vivamus erat urna, lacinia at porttitor pretium, tristique in ex. Ut pulvinar, ligula id fermentum sagittis, sem diam mollis sapien, vel pretium enim diam convallis erat. Morbi finibus turpis vitae vestibulum vulputate.\n" +
+            "\n" +
+            "Suspendisse potenti. Nam ultrices odio id magna ultrices rutrum non non nisi. Etiam eget magna fermentum, dignissim ligula sed, venenatis mi. Nam id lacus nec tortor efficitur gravida vitae id nulla. Fusce non mauris a tellus eleifend sagittis. Nam sed consectetur libero, ut finibus lacus. Donec iaculis varius nisi, a sagittis augue pellentesque quis. Integer semper dapibus odio euismod interdum. Donec porttitor dolor nec nisi tempor, ac fringilla nisl facilisis. Nulla luctus massa arcu. Proin ut diam auctor, aliquam odio ac, rhoncus enim. Vivamus vestibulum nunc sed mauris cursus viverra. Suspendisse egestas malesuada est posuere cursus. Vestibulum ac augue eget augue volutpat tincidunt eget tempor arcu. Vivamus id nisi tempus, sagittis metus sed, tempor leo. Mauris fermentum iaculis mi, id viverra est ullamcorper in.\n" +
+            "\n" +
+            "Proin vulputate, dui at viverra imperdiet, tellus ex ultrices eros, vel congue nibh dolor ornare nunc. Suspendisse tempor libero risus, nec mattis elit tincidunt nec. Ut in malesuada nisi. Proin blandit ornare lorem. Mauris a augue et leo vestibulum tincidunt. Sed ut felis et nulla ultricies porta. Morbi eu leo felis. Praesent volutpat ac metus iaculis congue. In vestibulum hendrerit dui at fermentum. Suspendisse eu faucibus magna. Morbi dapibus consectetur lacus, in scelerisque felis fringilla gravida. Proin vel magna posuere, egestas sapien eu, gravida erat. Nullam sed auctor sem. Nullam a dapibus massa.\n" +
+            "\n" +
+            "Donec lacinia elementum arcu, efficitur ornare nibh. Donec ac erat ante. Duis lobortis mauris vitae ligula feugiat, et vehicula dolor elementum. Sed semper ipsum ipsum, at elementum neque euismod eget. In eget fringilla nulla. Nam nec massa vestibulum, dapibus leo vel, iaculis ante. Integer nec maximus erat. Morbi eget sapien sed enim volutpat suscipit. Sed commodo nibh sit amet nisi tempus tempor. Proin convallis justo enim, eu elementum orci imperdiet sit amet. Quisque lacinia sapien nibh, in vestibulum orci rutrum vel. Proin sit amet egestas neque. Curabitur egestas dolor ligula, at aliquam sem tempus eget. Aenean maximus metus diam, nec finibus ante varius vitae. Suspendisse maximus aliquam arcu nec pellentesque.\n" +
+            "\n" +
+            "Maecenas nec metus pellentesque felis mattis euismod tincidunt sed urna. In placerat dolor nec convallis eleifend. Mauris gravida porta rutrum. Morbi risus arcu, fermentum pellentesque sapien nec, varius ultricies mi. Aenean neque metus, lobortis ut consectetur sit amet, bibendum fermentum urna. Donec non velit in ante convallis lacinia. Donec placerat justo in libero luctus congue. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Nam quis urna faucibus nunc egestas semper. Vivamus aliquam turpis orci, vel laoreet nunc ultricies lobortis. Ut imperdiet turpis in mauris dictum, et mollis lacus porta."
 
     private val htmlInfo = """
     <!doctype html>

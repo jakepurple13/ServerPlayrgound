@@ -1,9 +1,6 @@
 package com.example
 
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.select
-import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 
 class ShowDBApi(val db: Database, val showList: List<ShowInfo>) {
@@ -11,7 +8,7 @@ class ShowDBApi(val db: Database, val showList: List<ShowInfo>) {
     private val showDB = true
 
     fun getAll(): List<ShowInfo> {
-        return when(showDB) {
+        return when (showDB) {
             true -> {
                 showList
             }
@@ -25,8 +22,43 @@ class ShowDBApi(val db: Database, val showList: List<ShowInfo>) {
         }
     }
 
+    fun getAlphabet(checkLevel: List<String>): List<EpisodeApiInfo> {
+        return when (showDB) {
+            true -> {
+                showList.filter { it.name[0].toString() in checkLevel }.map {
+                    EpisodeApiInfo(
+                        it.name,
+                        "Something went wrong",
+                        it.url,
+                        "Sorry, something went wrong"
+                    )
+                }
+            }
+            false -> {
+                var list = listOf<EpisodeApiInfo>()
+                transaction(db) {
+                    list = Episodes.select {
+                        try {
+                            Episodes.name.substring(1, 1) inList checkLevel
+                        } catch (e: Exception) {
+                            Episodes.name neq Episodes.name
+                        }
+                    }.map {
+                        EpisodeApiInfo(
+                            it[Episodes.name],
+                            it[Episodes.image],
+                            it[Episodes.url],
+                            it[Episodes.description]
+                        )
+                    }.sortedBy { it.name }
+                }
+                list
+            }
+        }
+    }
+
     fun getType(type: String): List<ShowInfo> {
-        return when(showDB) {
+        return when (showDB) {
             true -> {
                 showList.filter { it.url.contains(type) }
             }
@@ -42,7 +74,7 @@ class ShowDBApi(val db: Database, val showList: List<ShowInfo>) {
     }
 
     fun randomShow(): ShowInfo {
-        return when(showDB) {
+        return when (showDB) {
             true -> {
                 showList.random()
             }
