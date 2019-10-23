@@ -25,7 +25,16 @@ class ShowDBApi(val db: Database, val showList: List<ShowInfo>) {
     fun getAlphabet(checkLevel: List<String>): List<EpisodeApiInfo> {
         return when (showDB) {
             true -> {
-                showList.filter { it.name[0].toString() in checkLevel }.map {
+                val checker: (ShowInfo) -> Boolean = if(checkLevel.contains("0")) {
+                    {
+                        !it.name[0].isLetter()
+                    }
+                } else {
+                    {
+                        it.name[0].toString() in checkLevel
+                    }
+                }
+                showList.filter(checker).map {
                     EpisodeApiInfo(
                         it.name,
                         "Something went wrong",

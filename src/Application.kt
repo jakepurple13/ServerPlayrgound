@@ -404,7 +404,7 @@ private fun Application.routing(dbApi: ShowDBApi, simpleJwt: SimpleJWT) {
             get("/{level}") {
                 val level = call.parameters["level"]!!
                 val checkLevel = when (level.toLowerCase()) {
-                    "0-9" -> ('0'..'9') + "." + "\""
+                    "0-9" -> ('0'..'9')
                     in (('a'..'z') + ('A'..'Z')).map { "$it" } -> listOf(level.toLowerCase(), level.toUpperCase())
                     else -> null
                 }?.map { "$it" }
