@@ -1,6 +1,5 @@
 package com.example.quizlibrary
 
-
 import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.freemarker.FreeMarkerContent
