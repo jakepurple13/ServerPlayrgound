@@ -77,12 +77,33 @@ class ApplicationTest {
         prettyLog(fibo(13))
         prettyLog(fibo2(13))
         prettyLog(13.fibonacci())
-        prettyLog("\n" + "Hello World! How are you doing?".frame())
-        prettyLog("\n" + loremIpsum.frame())
+        val helloWorld = "Hello World! How are you doing?"
+        val types = "" +
+                helloWorld.frame() +
+                "\n" +
+                helloWorld.frame(rtl = false) +
+                "\n" +
+                helloWorld.frame(rtl = true) +
+                "\n" +
+                helloWorld.frame("+", true) +
+                "\n" +
+                helloWorld.frame("+", false) +
+                "\n" +
+                helloWorld.frame("-", "-", "|", "|") +
+                "\n" +
+                helloWorld.frame("═", "═", "ǁ", "ǁ") +
+                "\n" +
+                helloWorld.frame("═", "═", "║", "║", "╔", "╗", "╚", "╝") +
+                "\n" +
+                helloWorld.doubleSpeaking().frame("═", "═", "║", "║", "╔", "╗", "╚", "╝")
+
+        prettyLog("\n" + types)
+        println()
         prettyLog(doubleSpeak("Hello World"))
         prettyLog(doubleSpeak2("Hello World"))
         prettyLog(doubleSpeak("Hello World!"))
         prettyLog(doubleSpeak2("Hello World!"))
+        prettyLog("bbc".toInt('\r'.toInt()))
     }
 
     private fun fibo(n: Int): Long = when (n) {
@@ -96,28 +117,76 @@ class ApplicationTest {
 
     private fun String.frame(): String {
         val s = replace("\n", " ").split(" ")
-        val fullLength = s.maxBy { it.length }?.length!!
+        val fullLength = s.maxBy { it.length }!!.length
         val topBottom = "*".repeat(fullLength + 4)
-        val middle = s.joinToString(separator = "\n") {
-            "* $it${" ".repeat(fullLength - it.length + 1)}*"
-        }
+        val middle = s.joinToString(separator = "\n") { "* $it${" ".repeat(fullLength - it.length + 1)}*" }
         return "$topBottom\n$middle\n$topBottom"
     }
 
-    private fun doubleSpeak(s: String) = s.split("").joinToString(""){it.repeat(2)}
+    private fun String.frame(surrounding: String = "*", rtl: Boolean = false): String {
+        val s = replace("\n", " ").split(" ")
+        val fullLength = s.maxBy { it.length }!!.length
+        val topBottom = surrounding.repeat(fullLength + 4)
+        val space: (String) -> String = { " ".repeat(fullLength - it.length + 1) }
+        val mid = s.joinToString(separator = "\n") {
+            "$surrounding${if (rtl) space(it) else " "}$it${if (rtl) " " else space(it)}$surrounding"
+        }
+        return "$topBottom\n$mid\n$topBottom"
+    }
+
+    private fun String.frame(
+        top: String = "*",
+        bottom: String = top,
+        left: String = "*",
+        right: String = left,
+        rtl: Boolean = false
+    ): String {
+        val s = replace("\n", " ").split(" ")
+        val fullLength = s.maxBy { it.length }!!.length
+        val space: (String) -> String = { " ".repeat(fullLength - it.length + 1) }
+        val mid = s.joinToString(separator = "\n") {
+            "$left${if (rtl) space(it) else " "}$it${if (rtl) " " else space(it)}$right"
+        }
+        return "${top.repeat(fullLength + 4)}\n$mid\n${bottom.repeat(fullLength + 4)}"
+    }
+
+    private fun String.frame(
+        top: String = "*",
+        bottom: String = top,
+        left: String = "*",
+        right: String = left,
+        topLeft: String = "*",
+        topRight: String = "*",
+        bottomLeft: String = "*",
+        bottomRight: String = "*",
+        rtl: Boolean = false
+    ): String {
+        val s = replace("\n", " ").split(" ")
+        val fullLength = s.maxBy { it.length }!!.length
+        val space: (String) -> String = { " ".repeat(fullLength - it.length + 1) }
+        val mid = s.joinToString(separator = "\n") {
+            "$left${if (rtl) space(it) else " "}$it${if (rtl) " " else space(it)}$right"
+        }
+        return "$topLeft${top.repeat(fullLength + 2)}$topRight\n$mid\n$bottomLeft${bottom.repeat(fullLength + 2)}$bottomRight"
+    }
+
+    private fun doubleSpeak(s: String) = s.split("").joinToString("") { it.repeat(2) }
     //HHeelllloo  wwoorrlldd!!  ::))
     //HHeelllloo  wwoorrlldd!!  ::))
-    private fun doubleSpeak2(s: String) = {s:String->s.map{"$it$it"}.joinToString("")}
+    private fun doubleSpeak2(s: String) = s.map { "$it$it" }.joinToString("")
+    private fun String.doubleSpeaking() = map {"$it$it" }.joinToString("")
+
     /**
     https://codegolf.stackexchange.com/questions/188988/ddoouubbllee-ssppeeaakk
 
     # Kotlin, 42 Chars and 42 bytes
 
-        s.split("").joinToString(""){it.repeat(2)}
+    s.split("").joinToString(""){it.repeat(2)}
 
     [Try it online!](https://tio.run/##JY09DsIwDIX3nsJkipcMjBUgsbHDBSIRKoNxKscVQlXPHkL7tvej772yMUl9TAKWivnSw9WUZEA4Qi2hjEzmncPwzCS3vJX/YCYLmsYUze9xWQnvSOKjDg1yVo3fw7Y@IcwdNI3NGYtfn9wlMWf4ZOX7Dnp0iN1Sfw "Kotlin – Try It Online")
 
      */
+
     @Test
     fun putMovie() {
         val list = Gson().fromJson<MutableList<ShowInfo>>(
