@@ -407,6 +407,8 @@ class EpisodeApi(val source: ShowInfo, timeOut: Int = 10000) {
             return listOfShows
         }
 
+    fun <T> map(episode: EpisodeApi.() -> T): T = episode()
+
     override fun toString(): String {
         return "$name - ${episodeList.size} eps - $description"
     }

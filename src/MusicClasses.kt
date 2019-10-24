@@ -1,5 +1,8 @@
 package com.example
 
+import com.example.quizlibrary.QuizInfo
+import com.example.quizlibrary.addQuiz
+import com.example.quizlibrary.quiz
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import io.ktor.application.Application
@@ -17,7 +20,6 @@ private fun makeMusicApiRequest(s: String): String? {
 }
 
 data class TrackInfo(val name: String, val id: Number)
-data class QuizQuestions(val question: String, val choices: List<String>, val correctAnswer: String)
 
 data class MusicUserInfo(val name: String, val artist: String, val score: String)
 

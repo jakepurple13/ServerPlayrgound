@@ -20,7 +20,8 @@ private val names = listOf(
 
 fun randomName(): String = names.random()
 
-fun <T, U> List<T>.intersect(uList: List<U>, filterPredicate: (T, U) -> Boolean) = filter { m -> uList.any { filterPredicate(m, it) } }
+fun <T, U> List<T>.intersect(uList: List<U>, filterPredicate: (T, U) -> Boolean) =
+    filter { m -> uList.any { filterPredicate(m, it) } }
 
 fun <T> MutableList<T>.randomRemove(): T {
     return removeAt(Random.nextInt(0, size))
@@ -43,6 +44,10 @@ suspend fun timeAction(block: () -> Job): Pair<Long, Long> {
     }
     return Pair(start, time)
 }
+
+fun <T, R> T.customMap(mapFunction: T.() -> R): R = mapFunction()
+
+fun <T, R, S> T.customMap(combine: S, mapFunction: T.(S) -> R): R = mapFunction(combine)
 
 fun prettyLog(msg: Any?) {
     //the main message to be logged

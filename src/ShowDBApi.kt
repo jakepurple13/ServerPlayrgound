@@ -28,14 +28,10 @@ class ShowDBApi(val db: Database, val showList: List<ShowInfo>) {
     fun getAlphabet(checkLevel: List<String>): List<EpisodeApiInfo> {
         return when (showDB) {
             true -> {
-                val checker: (ShowInfo) -> Boolean = if(checkLevel.contains("0")) {
-                    {
-                        !it.name[0].isLetter()
-                    }
+                val checker: (ShowInfo) -> Boolean = if (checkLevel.contains("0")) {
+                    { !it.name[0].isLetter() }
                 } else {
-                    {
-                        it.name[0].toString() in checkLevel
-                    }
+                    { it.name[0].toString() in checkLevel }
                 }
                 showList.filter(checker).map {
                     EpisodeApiInfo(
@@ -47,14 +43,10 @@ class ShowDBApi(val db: Database, val showList: List<ShowInfo>) {
                 }
             }
             false -> {
-                val checker: (EpisodeApiInfo) -> Boolean = if(checkLevel.contains("0")) {
-                    {
-                        !it.name[0].isLetter()
-                    }
+                val checker: (EpisodeApiInfo) -> Boolean = if (checkLevel.contains("0")) {
+                    { !it.name[0].isLetter() }
                 } else {
-                    {
-                        it.name[0].toString() in checkLevel
-                    }
+                    { it.name[0].toString() in checkLevel }
                 }
                 var list = listOf<EpisodeApiInfo>()
                 transaction(db) {
@@ -123,13 +115,23 @@ class ShowDBApi(val db: Database, val showList: List<ShowInfo>) {
             true -> {
                 val s = showList.find { it.url.contains(name.substring(1)) }
                 if (s != null) {
-                    val e = EpisodeApi(s)
+                    /*val e = EpisodeApi(s).map {
+                        EpisodeApiInfo(name, image, source.url, description, episodeList.map { EpListInfo(it.name, it.url) })
+                    }
                     episode = EpisodeApiInfo(
                         e.name,
                         e.image,
                         e.source.url,
                         e.description,
-                        e.episodeList.map { EpListInfo(it.name, it.url) })
+                        e.episodeList.map { EpListInfo(it.name, it.url) })*/
+                    episode = EpisodeApi(s).map {
+                        EpisodeApiInfo(
+                            name,
+                            image,
+                            source.url,
+                            description,
+                            episodeList.map { EpListInfo(it.name, it.url) })
+                    }
                 }
             }
             false -> {

@@ -1,5 +1,8 @@
 package com.example
 
+import com.example.quizlibrary.QuizInfo
+import com.example.quizlibrary.addQuiz
+import com.example.quizlibrary.quiz
 import io.ktor.application.call
 import io.ktor.html.respondHtml
 import io.ktor.response.respond
