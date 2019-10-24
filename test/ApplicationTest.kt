@@ -77,27 +77,28 @@ class ApplicationTest {
         prettyLog(fibo(13))
         prettyLog(fibo2(13))
         prettyLog(13.fibonacci())
-        val helloWorld = "Hello World! How are you doing?"
-        val types = "" +
-                helloWorld.frame() +
-                "\n" +
-                helloWorld.frame(rtl = false) +
-                "\n" +
-                helloWorld.frame(rtl = true) +
-                "\n" +
-                helloWorld.frame("+", true) +
-                "\n" +
-                helloWorld.frame("+", false) +
-                "\n" +
-                helloWorld.frame("-", "-", "|", "|") +
-                "\n" +
-                helloWorld.frame("═", "═", "ǁ", "ǁ") +
-                "\n" +
-                helloWorld.frame("═", "═", "║", "║", "╔", "╗", "╚", "╝") +
-                "\n" +
-                helloWorld.doubleSpeaking().frame("═", "═", "║", "║", "╔", "╗", "╚", "╝")
 
-        prettyLog("\n" + types)
+        val helloWorld = "Hello World! How are you doing?"
+
+        var f = ""
+
+        fun String.addToString() {
+            f += this + "\n"
+        }
+
+        helloWorld.frame().addToString()
+        helloWorld.frame(rtl = false).addToString()
+        helloWorld.frame(rtl = true).addToString()
+        helloWorld.frame("+", true).addToString()
+        helloWorld.frame("+", false).addToString()
+        helloWorld.frame("-", "-", "|", "|").addToString()
+        helloWorld.frame("═", "═", "║", "║").addToString()
+        helloWorld.frame("═", "═", "║", "║", "╔", "╗", "╚", "╝").addToString()
+        helloWorld.frame("═", "║", "╔", "╗", "╚", "╝").addToString()
+        helloWorld.doubleSpeaking().frame("═", "═", "║", "║", "╔", "╗", "╚", "╝").addToString()
+
+        prettyLog("\n" + f)
+
         println()
         prettyLog(doubleSpeak("Hello World"))
         prettyLog(doubleSpeak2("Hello World"))
@@ -121,6 +122,17 @@ class ApplicationTest {
         val topBottom = "*".repeat(fullLength + 4)
         val middle = s.joinToString(separator = "\n") { "* $it${" ".repeat(fullLength - it.length + 1)}*" }
         return "$topBottom\n$middle\n$topBottom"
+    }
+
+    private fun String.frame(rtl: Boolean = false): String {
+        val s = replace("\n", " ").split(" ")
+        val fullLength = s.maxBy { it.length }!!.length
+        val topBottom = "*".repeat(fullLength + 4)
+        val space: (String) -> String = { " ".repeat(fullLength - it.length + 1) }
+        val mid = s.joinToString(separator = "\n") {
+            "*${if (rtl) space(it) else " "}$it${if (rtl) " " else space(it)}*"
+        }
+        return "$topBottom\n$mid\n$topBottom"
     }
 
     private fun String.frame(surrounding: String = "*", rtl: Boolean = false): String {
@@ -151,6 +163,25 @@ class ApplicationTest {
     }
 
     private fun String.frame(
+        topBottom: String = "*",
+        sides: String = "*",
+        topLeft: String = "*",
+        topRight: String = "*",
+        bottomLeft: String = "*",
+        bottomRight: String = "*",
+        rtl: Boolean = false
+    ): String {
+        val s = replace("\n", " ").split(" ")
+        val fullLength = s.maxBy { it.length }!!.length
+        val space: (String) -> String = { " ".repeat(fullLength - it.length + 1) }
+        val mid = s.joinToString(separator = "\n") {
+            "$sides${if (rtl) space(it) else " "}$it${if (rtl) " " else space(it)}$sides"
+        }
+        val bottomTop = topBottom.repeat(fullLength + 2)
+        return "$topLeft$bottomTop$topRight\n$mid\n$bottomLeft$bottomTop$bottomRight"
+    }
+
+    private fun String.frame(
         top: String = "*",
         bottom: String = top,
         left: String = "*",
@@ -174,7 +205,8 @@ class ApplicationTest {
     //HHeelllloo  wwoorrlldd!!  ::))
     //HHeelllloo  wwoorrlldd!!  ::))
     private fun doubleSpeak2(s: String) = s.map { "$it$it" }.joinToString("")
-    private fun String.doubleSpeaking() = map {"$it$it" }.joinToString("")
+
+    private fun String.doubleSpeaking() = map { "$it$it" }.joinToString("")
 
     /**
     https://codegolf.stackexchange.com/questions/188988/ddoouubbllee-ssppeeaakk
