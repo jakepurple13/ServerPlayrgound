@@ -49,6 +49,20 @@ fun <T, R> T.customMap(mapFunction: T.() -> R): R = mapFunction()
 
 fun <T, R, S> T.customMap(combine: S, mapFunction: T.(S) -> R): R = mapFunction(combine)
 
+fun <T, R, S> T.customListMap(vararg combine: S, mapFunction: T.(S) -> R): List<R> = combine.map { mapFunction(it) }
+
+fun <T, R, S> T.customCollectionMap(combine: Collection<S>, mapFunction: T.(S) -> R): List<R> =
+    combine.map { mapFunction(it) }
+
+fun <T, R> Collection<T>.filterMap(filterPredicate: (T) -> Boolean, mapPredicate: (T) -> R): List<R> =
+    filter(filterPredicate).map(mapPredicate)
+
+fun <T, R> Collection<T>.mapFilter(mapPredicate: (T) -> R, filterPredicate: (R) -> Boolean): List<R> =
+    map(mapPredicate).filter(filterPredicate)
+
+fun <T, R : Any> Collection<T>.filterMapNotNull(filterPredicate: (T) -> Boolean, mapPredicate: (T) -> R?): List<R> =
+    filter(filterPredicate).mapNotNull(mapPredicate)
+
 fun prettyLog(msg: Any?) {
     //the main message to be logged
     var logged = msg.toString()

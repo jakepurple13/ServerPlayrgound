@@ -22,6 +22,25 @@ class ApplicationTest {
         randomEnum<ChatServer.MessageType>().apply { prettyLog(this) }
         ChatServer.MessageType.values().random().apply { prettyLog(this) }
         ChatServer.MessageType::class.random().apply { prettyLog(this) }*/
+        data class Contact(val name: String, val phone: String)
+        data class Car(val name: String, val brand: String)
+        data class Phone(val name: String, val brand: String)
+
+        val contact = Contact("Jake", "Phone")
+        val car = Car("Mini", "Cooper")
+        val car2 = Car("TT", "Audi")
+        val carList = listOf(car, car2)
+
+        val f0 = contact.customMap { Phone(name, phone) }
+        val f = contact.customMap(car) { Phone(name, it.brand) }
+        val f1 = contact.customListMap(car, car2) { Phone(name, it.brand) }
+        val f2 = contact.customCollectionMap(carList) { Phone(name, it.brand) }
+
+        prettyLog(f0)
+        prettyLog(f)
+        prettyLog(f1)
+        prettyLog(f2)
+
     }
 
     @Test
@@ -329,6 +348,659 @@ class ApplicationTest {
             }
         }
     }
+
+    private fun htTestTwo() =
+        createHTML(true)
+            .html {
+                lang = "en"
+                head {
+                    title { +"""Music Quiz""" }
+                    style {
+                        +"""body {
+            font-family: Open Sans, serif;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        #title {
+            text-decoration: underline;
+        }
+
+        #quiz_container {
+            text-align: center;
+        }
+
+        #quiz {
+            text-indent: 10px;
+            display: none;
+        }
+
+        .button {
+            border: 4px solid;
+            border-radius: 5px;
+            width: fit-content;
+            padding-left: 5px;
+            padding-right: 5px;
+            position: relative;
+            float: right;
+            background-color: #DCDCDC;
+            color: black;
+            margin: 0 2px 0 2px;
+        }
+
+        .infoText {
+            border: 4px solid;
+            border-radius: 5px;
+            width: fit-content;
+            padding-left: 5px;
+            padding-right: 5px;
+            position: relative;
+            float: left;
+            background-color: #DCDCDC;
+            color: black;
+            margin: 0 2px 0 2px;
+        }
+
+        .button.active {
+            background-color: #F8F8FF;
+            color: #525252;
+        }
+
+        button {
+            position: relative;
+            float: right;
+        }
+
+        .button a {
+            text-decoration: none;
+            color: black;
+        }
+
+        dd {
+            display: block;
+            margin-left: 40px;
+            color: #aaaaaa;
+        }
+
+        dt {
+            display: block;
+            color: #aaaaaa;
+        }
+
+        dl {
+            display: block;
+            margin: 1em 0;
+        }
+
+        #container {
+            width: 75%;
+            margin: auto;
+            padding: 0 25px 40px 10px;
+            background-color: #1E90FF;
+            border: 4px solid #B0E0E6;
+            border-radius: 5px;
+            color: #FFFFFF;
+            font-weight: bold;
+            box-shadow: 5px 5px 5px #888;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        #next {
+            display: none;
+        }
+
+        #prev {
+            display: none;
+        }
+
+        #start {
+            display: none;
+        }
+
+        table.darkTable {
+            font-family: "Arial Black", Gadget, sans-serif;
+            border: 2px solid #000000;
+            background-color: #4A4A4A;
+            width: 80%;
+            height: 200px;
+            text-align: center;
+            border-collapse: collapse;
+            border-radius: 5px;
+            /*the 5 below is what I added*/
+            margin-top: 20px;
+            left: 10%;
+            right: 10%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        table.darkTable td, table.darkTable th {
+            border: 1px solid #4A4A4A;
+            padding: 3px 2px;
+        }
+
+        table.darkTable tbody td {
+            font-size: 13px;
+            color: #E6E6E6;
+        }
+
+        table.darkTable tr:nth-child(even) {
+            background: #888888;
+        }
+
+        table.darkTable thead {
+            background: #000000;
+            border-bottom: 3px solid #000000;
+        }
+
+        table.darkTable thead th {
+            font-size: 15px;
+            font-weight: bold;
+            color: #E6E6E6;
+            text-align: center;
+            border-left: 2px solid #4A4A4A;
+        }
+
+        table.darkTable thead th:first-child {
+            border-left: none;
+        }
+
+        table.darkTable tfoot {
+            font-size: 12px;
+            font-weight: bold;
+            color: #E6E6E6;
+            background: #000000;
+            background: -moz-linear-gradient(top, #404040 0%, #191919 66%, #000000 100%);
+            background: -webkit-linear-gradient(top, #404040 0%, #191919 66%, #000000 100%);
+            background: linear-gradient(to bottom, #404040 0%, #191919 66%, #000000 100%);
+            border-top: 1px solid #4A4A4A;
+        }
+
+        table.darkTable tfoot td {
+            font-size: 12px;
+        }"""
+                    }
+                    link {
+                        rel = "stylesheet"
+                        type = "text/css"
+                        href = "https://fonts.googleapis.com/css?family=Open Sans"
+                    }
+                }
+                body {
+                    style = "background-color: #202124"
+                    div {
+                        id = "container"
+                        div {
+                            id = "title"
+                            h1 { +"""Music Quiz""" }
+                        }
+                        br {
+                        }
+                        div {
+                            id = "quiz_container"
+                            div {
+                                id = "quiz"
+                            }
+                        }
+                        div(classes = "infoText") {
+                            id = "quiz_count"
+                            +"""0/0"""
+                        }
+                        div(classes = "button") {
+                            id = "next"
+                            a {
+                                href = "#"
+                                +"""Next"""
+                            }
+                        }
+                        div(classes = "button") {
+                            id = "prev"
+                            a {
+                                href = "#"
+                                +"""Prev"""
+                            }
+                        }
+                        div(classes = "button") {
+                            id = "start"
+                            a {
+                                href = "#"
+                                +"""Start Over"""
+                            }
+                        }
+                        +"""<!-- <button class='' id='next'>Next</a></button>
+    <button class='' id='prev'>Prev</a></button>
+    <button class='' id='start'> Start Over</a></button> -->"""
+                    }
+                    div {
+                        id = "highScoreList"
+                    }
+                    div(classes = "modal fade") {
+                        id = "exampleModal"
+                        tabIndex = "-1"
+                        role = "dialog"
+                        attributes["aria-labelledby"] = "exampleModalLabel"
+                        attributes["aria-hidden"] = "true"
+                        div(classes = "modal-dialog") {
+                            role = "document"
+                            div(classes = "modal-content") {
+                                div(classes = "modal-header") {
+                                    h5(classes = "modal-title") {
+                                        id = "exampleModalLabel"
+                                        +"""Choose an Artist"""
+                                    }
+                                    button(classes = "close") {
+                                        type = ButtonType.button
+                                        attributes["data-dismiss"] = "modal"
+                                        attributes["aria-label"] = "Close"
+                                        span {
+                                            attributes["aria-hidden"] = "true"
+                                            +"""&times;"""
+                                        }
+                                    }
+                                }
+                                div(classes = "modal-body") {
+                                    div(classes = "input-group input-group-sm mb-3") {
+                                        div(classes = "input-group-prepend") {
+                                            span(classes = "input-group-text") {
+                                                id = "image_changes"
+                                                +"""Choose Artist"""
+                                            }
+                                        }
+                                        input(classes = "form-control") {
+                                            type = InputType.text
+                                            id = "artist_choice"
+                                            attributes["aria-label"] = "Small"
+                                            attributes["aria-describedby"] = "inputGroup-sizing-sm"
+                                        }
+                                    }
+                                }
+                                div(classes = "modal-footer") {
+                                    button(classes = "btn btn-secondary") {
+                                        type = ButtonType.button
+                                        id = "closeGame"
+                                        attributes["data-dismiss"] = "modal"
+                                        +"""Close"""
+                                    }
+                                    button(classes = "btn btn-primary") {
+                                        type = ButtonType.button
+                                        id = "startGame"
+                                        attributes["data-dismiss"] = "modal"
+                                        +"""Go!"""
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    div(classes = "modal fade") {
+                        id = "highScoreModal"
+                        tabIndex = "-1"
+                        role = "dialog"
+                        attributes["aria-labelledby"] = "exampleModalLabel"
+                        attributes["aria-hidden"] = "true"
+                        div(classes = "modal-dialog") {
+                            role = "document"
+                            div(classes = "modal-content") {
+                                div(classes = "modal-header") {
+                                    h5(classes = "modal-title") {
+                                        id = "highScoreLabel"
+                                        +"""Score"""
+                                    }
+                                    button(classes = "close") {
+                                        type = ButtonType.button
+                                        attributes["data-dismiss"] = "modal"
+                                        attributes["aria-label"] = "Close"
+                                        span {
+                                            attributes["aria-hidden"] = "true"
+                                            +"""&times;"""
+                                        }
+                                    }
+                                }
+                                div(classes = "modal-body") {
+                                    span(classes = "input-group-text") {
+                                        id = "scoreArtist"
+                                    }
+                                    span(classes = "input-group-text") {
+                                        id = "scoreScore"
+                                    }
+                                    div(classes = "input-group input-group-sm mb-3") {
+                                        div(classes = "input-group-prepend") {
+                                            span(classes = "input-group-text") {
+                                                id = "scoreName"
+                                                +"""Enter Name"""
+                                            }
+                                        }
+                                        input(classes = "form-control") {
+                                            type = InputType.text
+                                            id = "highScoreName"
+                                            attributes["aria-label"] = "Small"
+                                            attributes["aria-describedby"] = "inputGroup-sizing-sm"
+                                        }
+                                    }
+                                }
+                                div(classes = "modal-footer") {
+                                    button(classes = "btn btn-secondary") {
+                                        type = ButtonType.button
+                                        id = "noSubmit"
+                                        attributes["data-dismiss"] = "modal"
+                                        +"""Close"""
+                                    }
+                                    button(classes = "btn btn-primary") {
+                                        type = ButtonType.button
+                                        id = "submitScore"
+                                        +"""Submit"""
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    script {
+                        src = "https://code.jquery.com/jquery-3.3.1.min.js"
+                        integrity = "sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+                    }
+                    link {
+                        rel = "stylesheet"
+                        href = "https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+                        attributes["integrity"] =
+                            "sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+                        attributes["crossorigin"] = "anonymous"
+                    }
+                    script {
+                        src = "https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+                        integrity = "sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+                    }
+                    script {
+                        src =
+                            "https://cdn.jsdelivr.net/npm/gasparesganga-jquery-loading-overlay@2.1.6/dist/loadingoverlay.min.js"
+                    }
+                    +"""<!--<script type="text/javascript" src='questions.json'></script>-->"""
+                    script {
+                        type = "text/javascript"
+                        +"""(function () {
+
+        function highScoreListSetup() {
+            $.ajax({
+                url: '/music/highScores.json',
+                type: "GET",
+                dataType: "html",
+                success: function (json) {
+                    //console.log(json);
+                    $("#highList").remove();
+                    $("#highScoreList").html(json);
+                    /*$("#highList").remove();
+                    const scoreList = document.createElement("dl");
+                    scoreList.id = "highList";
+                    for (let key in json) {
+                        let item = document.createElement("dt");
+                        item.innerText = key;
+                        scoreList.appendChild(item);
+                        for (let value in json[key]) {
+                            let user = json[key][value];
+                            console.log(user);
+                            let input = document.createElement("dd");
+                            input.innerText = user.name + " | " + user.score;
+                            scoreList.appendChild(input);
+                        }
+                    }
+                    $("#highScoreList").append(scoreList);*/
+                }
+            });
+        }
+
+        highScoreListSetup();
+
+        function submitHighScore() {
+            $("#highScoreModal").LoadingOverlay("show", {
+                image: "",
+                text: "Submitting..."
+            });
+            $.ajax({
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                url: '/music',
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify({
+                    name: $('#highScoreName').val(),
+                    artist: $('#artist_choice').val(),
+                    score: correct + "/" + questions.length
+                }),
+                success: function (json) {
+                    let hsm = $("#highScoreModal");
+                    hsm.LoadingOverlay("hide");
+                    let text = json.submitted;
+                    let displayText = "";
+                    if (text) {
+                        displayText = "Submitted Successful";
+                    } else {
+                        displayText = "Submitted Failed";
+                    }
+                    $.LoadingOverlay("show", {
+                        image: "",
+                        text: displayText
+                    });
+                    setTimeout(function () {
+                        if (text) {
+                            $('#highScoreModal').modal('hide');
+                            highScoreListSetup();
+                        }
+                        $.LoadingOverlay("hide");
+                    }, 2000);
+                }
+            });
+        }
+
+        function scoreModalSetup() {
+            document.getElementById("scoreScore").innerText = correct + "/" + questions.length;
+            document.getElementById("scoreArtist").innerText = $('#artist_choice').val();
+        }
+
+        let questions;
+
+        let questionCounter = 0; //Tracks question number
+        let selections = []; //Array containing user choices
+        let correct = 0;
+        const quiz = $("#quiz"); //Quiz div object
+
+        function startGame() {
+            $("#container").LoadingOverlay("show", {
+                background: "#B0E0E6"
+            });
+            $.ajax({
+                url: '/music/music_get_quiz_from=' + $('#artist_choice').val() + '.json',
+                type: "GET",
+                dataType: "json",
+                success: function (json) {
+                    $("#container").LoadingOverlay("hide");
+                    questions = json;
+                    $("#start").hide();
+                    // Display initial question
+                    displayNext();
+                },
+                error: function (a, b, c) {
+                    $("#container").LoadingOverlay("hide");
+                    alert("Something went wrong. Please try again")
+                }
+            });
+        }
+
+        function closeGame() {
+            $("#start").show();
+        }
+
+        $('#exampleModal').modal('show');
+        document.getElementById("startGame").onclick = startGame;
+        document.getElementById("closeGame").onclick = closeGame;
+        document.getElementById("submitScore").onclick = submitHighScore;
+
+        $("#start").show();
+
+        // Click handler for the 'next' button
+        $("#next").on("click", function (e) {
+            e.preventDefault();
+            // Suspend click listener during fade animation
+            if (quiz.is(":animated")) {
+                return false;
+            }
+            choose();
+
+            // If no user selection, progress is stopped
+            if (isNaN(selections[questionCounter])) {
+                alert("Please make a selection!");
+            } else {
+                questionCounter++;
+                displayNext();
+            }
+        });
+
+        // Click handler for the 'prev' button
+        $("#prev").on("click", function (e) {
+            e.preventDefault();
+
+            if (quiz.is(":animated")) {
+                return false;
+            }
+            choose();
+            questionCounter--;
+            displayNext();
+        });
+
+        // Click handler for the 'Start Over' button
+        $("#start").on("click", function (e) {
+            $('#exampleModal').modal('show');
+            e.preventDefault();
+
+            if (quiz.is(":animated")) {
+                return false;
+            }
+            questionCounter = 0;
+            selections = [];
+            correct = 0;
+            //displayNext();
+            //$("#start").hide();
+        });
+
+        // Animates buttons on hover
+        $(".button").on("mouseenter", function () {
+            $(this).addClass("active");
+        });
+        $(".button").on("mouseleave", function () {
+            $(this).removeClass("active");
+        });
+
+        // Creates and returns the div that contains the questions and
+        // the answer selections
+        function createQuestionElement(index) {
+            const qElement = $("<div>", {
+                id: "question"
+            });
+
+            const header = $("<h2>Question " + (index + 1) + ":</h2>");
+            qElement.append(header);
+
+            const question = $("<p>").append(questions[index].question);
+            qElement.append(question);
+
+            const radioButtons = createRadios(index);
+            qElement.append(radioButtons);
+
+            return qElement;
+        }
+
+        // Creates a list of the answer choices as radio inputs
+        function createRadios(index) {
+            const radioList = $("<ul style='text-align: left;display: inline-block'>");
+            let item;
+            let input = "";
+            for (let i = 0; i < questions[index].choices.length; i++) {
+                item = $("<li>");
+                input = '<input type="radio" id="' + questions[index].choices[i] + '" name="answer" value=' + i + " />";
+                let s = '<label for="' + questions[index].choices[i] + '">' + questions[index].choices[i] + '</label>';
+                input += s;
+                item.append(input);
+                radioList.append(item);
+            }
+            return radioList;
+        }
+
+        // Reads the user selection and pushes the value to an array
+        function choose() {
+            selections[questionCounter] = +$('input[name="answer"]:checked').val();
+        }
+
+        // Displays next requested element
+        function displayNext() {
+            $('#quiz_count').text(questionCounter + "/" + questions.length);
+            quiz.fadeOut(function () {
+                $("#question").remove();
+
+                if (questionCounter < questions.length) {
+                    const nextQuestion = createQuestionElement(questionCounter);
+                    quiz.append(nextQuestion).fadeIn();
+                    if (!isNaN(selections[questionCounter])) {
+                        $("input[value=" + selections[questionCounter] + "]").prop(
+                            "checked",
+                            true
+                        );
+                    }
+
+                    // Controls display of 'prev' button
+                    if (questionCounter === 1) {
+                        $("#prev").show();
+                    } else if (questionCounter === 0) {
+                        $("#prev").hide();
+                        $("#next").show();
+                    }
+                } else {
+                    const scoreElem = displayScore();
+                    quiz.append(scoreElem).fadeIn();
+                    $("#next").hide();
+                    $("#prev").hide();
+                    $("#start").show();
+                    scoreModalSetup();
+                    $('#highScoreModal').modal('show');
+                }
+            });
+        }
+
+        // Computes score and returns a paragraph element to be displayed
+        function displayScore() {
+            const score = $("<p>", {id: "question"});
+
+            let numCorrect = 0;
+            for (let i = 0; i < selections.length; i++) {
+                if (questions[i].choices[selections[i]] === questions[i].correctAnswer) {
+                    numCorrect++;
+                }
+            }
+
+            let aAndQ = "";
+            for (let i = 0; i < selections.length; i++) {
+                aAndQ += i + ') Your Pick: ' + questions[i].choices[selections[i]] + ' | Correct Answer: ' + questions[i].correctAnswer + "<br /><br />"
+            }
+            correct = numCorrect;
+            score.append(
+                "You got " +
+                numCorrect +
+                " questions out of " +
+                questions.length +
+                " right!!!<br /><br />" +
+                aAndQ
+            );
+            return score;
+        }
+    })();"""
+                    }
+                }
+            }
 
     private val loremIpsum =
         "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed turpis elit, dictum vel bibendum vitae, auctor pharetra sem. Nullam fermentum lacus et mollis mollis. Integer elementum placerat nulla non pharetra. In est quam, mollis eget metus ac, laoreet ornare nisi. In facilisis elit et turpis dictum, eu suscipit lorem ultrices. Nullam tempus aliquam neque, in accumsan ligula luctus a. Cras pretium neque non justo gravida dignissim. Proin congue blandit tempor. Sed accumsan leo eu malesuada vestibulum. Cras molestie porta lacus, eget posuere leo consequat in. Maecenas faucibus vulputate sem, eget venenatis erat lobortis sed. Nullam purus mi, feugiat at lorem non, ultricies rhoncus lorem. Vivamus erat urna, lacinia at porttitor pretium, tristique in ex. Ut pulvinar, ligula id fermentum sagittis, sem diam mollis sapien, vel pretium enim diam convallis erat. Morbi finibus turpis vitae vestibulum vulputate.\n" +
