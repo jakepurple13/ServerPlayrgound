@@ -29,9 +29,11 @@ object DbSettings {
     }
 }
 
+private const val varLength = 3072
+
 object Shows : IntIdTable() {
-    val name = varchar("show_name", 10000)
-    val url = varchar("show_url", 10000).uniqueIndex()
+    val name = text("show_name")
+    val url = varchar("show_url", varLength).uniqueIndex()
 }
 
 class Show(id: EntityID<Int>) : IntEntity(id) {
@@ -40,16 +42,14 @@ class Show(id: EntityID<Int>) : IntEntity(id) {
     var name by Shows.name
     var url by Shows.url
 
-    override fun toString(): String {
-        return "$name: $url"
-    }
+    override fun toString(): String = "$name: $url"
 }
 
 object Episodes : IntIdTable() {
-    val url = varchar("episode_url", 10000).uniqueIndex()
-    val name = varchar("episode_name", 10000)
-    val image = varchar("episode_image_url", 10000)
-    val description = varchar("episode_description", 10000)
+    val url = varchar("episode_url", varLength).uniqueIndex()
+    val name = text("episode_name")
+    val image = text("episode_image")
+    val description = text("episode_des")
     val show = reference("episode_show", Shows)
 }
 
@@ -78,14 +78,12 @@ class Episode(id: EntityID<Int>) : IntEntity(id) {
     var description by Episodes.description
     var show by Show referencedOn Episodes.show
 
-    override fun toString(): String {
-        return "$name: $url | $description | $image | $show"
-    }
+    override fun toString(): String = "$name: $url | $description | $image | $show"
 }
 
 object EpisodeLists : IntIdTable() {
-    val name = varchar("episodelist_name", 10000)
-    val url = varchar("episodelist_url", 10000).uniqueIndex()
+    val name = text("episodelist_name")
+    val url = varchar("episodelist_url", varLength).uniqueIndex()
     val episode = reference("episodelist_episode", Episodes)
 }
 
@@ -96,9 +94,7 @@ class EpisodeList(id: EntityID<Int>) : IntEntity(id) {
     var url by EpisodeLists.url
     var episode by Episode referencedOn EpisodeLists.episode
 
-    override fun toString(): String {
-        return "$name: $url | ${episode.name}"
-    }
+    override fun toString(): String = "$name: $url | ${episode.name}"
 }
 
 fun getAllShows(db: Database) {
@@ -196,6 +192,7 @@ private fun addAllShowInformation(db: Database, list: List<ShowInfo>) {
                 commit()
                 continue
             } finally {
+                commit()
                 /*commit()
                 continue*/
             }

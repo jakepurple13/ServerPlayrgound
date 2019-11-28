@@ -101,7 +101,7 @@ data class FirebaseShow(
 
 fun Application.firebase() {
     // Use the application default credentials
-    val serviceAccount = FileInputStream("resources/database/chesstest-3cd2a-firebase-adminsdk-5ytkb-3508b44064.json")
+    /*val serviceAccount = FileInputStream("resources/database/chesstest-3cd2a-firebase-adminsdk-5ytkb-3508b44064.json")
     val credentials = GoogleCredentials.fromStream(serviceAccount)
     val options = FirebaseOptions.Builder()
         .setCredentials(credentials)
@@ -114,17 +114,17 @@ fun Application.firebase() {
     val ids = db.listCollections().map { it.id }
     val showInfos = db.listCollections().map { it.get().get().toObjects(FirebaseShow::class.java) }
 
-    prettyLog(ids)
+    prettyLog(ids)*/
     //prettyLog("First id: ${ids[0]}: " + showInfos[0].toPrettyJson())
     //prettyLog("Second id: ${ids[1]}:" + showInfos[1].toPrettyJson())
 
     //FirebaseMessaging.getInstance().subscribeToTopic(ids, "test")
 
-    val recent = ShowApi.getAllRecent()
+    /*val recent = ShowApi.getAllRecent()
 
     val both = recent.intersect(showInfos.flatten().distinctBy { it.url }) { one, two -> one.url == two.url }
 
-    prettyLog(both.toPrettyJson())
+    prettyLog(both.toPrettyJson())*/
 
     /*val listOfMessage = arrayListOf<Message>()
 
@@ -219,6 +219,7 @@ private fun Application.database(db: Database) {
 
     GlobalScope.launch {
         //val cssGridLayout = "https://grid.layoutit.com/"
+        //createEverything(db, ShowApi.getSources(Source.LIVE_ACTION).take(11))
         //createEverything(db, ShowApi.getSources(Source.ANIME, Source.DUBBED, Source.CARTOON, Source.CARTOON_MOVIES, Source.LIVE_ACTION))
         //createEverything(db, ShowApi.getSources(Source.CARTOON_MOVIES, Source.LIVE_ACTION_MOVIES))
         Notify.create()

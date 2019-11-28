@@ -8,7 +8,7 @@ import org.jetbrains.exposed.sql.transactions.transaction
 
 class ShowDBApi(val db: Database, val showList: List<ShowInfo>) {
 
-    private val showDB = true
+    private val showDB = false
 
     fun getAll(): List<ShowInfo> {
         return when (showDB) {
