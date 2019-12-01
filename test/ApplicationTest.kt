@@ -14,6 +14,12 @@ import kotlin.test.Test
 class ApplicationTest {
 
     @Test
+    fun syncTest() {
+        val f = ShowApi(Source.LIVE_ACTION_MOVIES).showInfoList
+        prettyLog(f)
+    }
+
+    @Test
     fun genericEnumTest() {
         /*randomEnum<Source>().apply { prettyLog(this) }
         Source.values().random().apply { prettyLog(this) }

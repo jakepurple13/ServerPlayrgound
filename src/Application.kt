@@ -222,6 +222,7 @@ private fun Application.database(db: Database) {
         //createEverything(db, ShowApi.getSources(Source.LIVE_ACTION).take(11))
         //createEverything(db, ShowApi.getSources(Source.ANIME, Source.DUBBED, Source.CARTOON, Source.CARTOON_MOVIES, Source.LIVE_ACTION))
         //createEverything(db, ShowApi.getSources(Source.CARTOON_MOVIES, Source.LIVE_ACTION_MOVIES))
+        createEverything(db, ShowApi.getEverything())
         Notify.create()
             .title("Finished")
             .text("Finished getting sources")

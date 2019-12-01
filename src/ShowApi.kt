@@ -3,13 +3,18 @@
 package com.example
 
 import com.google.gson.Gson
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
+import org.jsoup.nodes.Element
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
 import java.net.SocketTimeoutException
 import java.net.URL
+import java.util.*
+import kotlin.collections.ArrayList
 
 enum class ShowType {
     MOVIE,
@@ -80,6 +85,15 @@ class ShowApi(private val source: Source) {
             return cartoon + anime + live
         }
 
+        fun getEverything(): List<ShowInfo> = getSources(
+            Source.ANIME,
+            Source.CARTOON,
+            Source.CARTOON_MOVIES,
+            Source.DUBBED,
+            Source.LIVE_ACTION,
+            Source.LIVE_ACTION_MOVIES
+        )
+
         fun getSources(vararg source: Source): List<ShowInfo> {
             val list = arrayListOf<ShowInfo>()
             source.forEach {
@@ -117,6 +131,7 @@ class ShowApi(private val source: Source) {
                 gogoAnimeAll()
         } else if (source.link.contains("putlocker")) {
             if (source.movie) {
+                //TODO: Look into multithreading
                 val list = arrayListOf<ShowInfo>()
                 val alphabet = doc.allElements.select("ul.pagination-az").select("a.page-link")
                 for (p in alphabet) {
@@ -152,7 +167,13 @@ class ShowApi(private val source: Source) {
             val listOfStuff = lists.select("td").select("a[href^=http]")
             val listOfShows = arrayListOf<ShowInfo>()
             for (element in listOfStuff) {
-                listOfShows.add(ShowInfo(element.text(), element.attr("abs:href"), if(source.movie) ShowType.MOVIE else ShowType.SHOW))
+                listOfShows.add(
+                    ShowInfo(
+                        element.text(),
+                        element.attr("abs:href"),
+                        if (source.movie) ShowType.MOVIE else ShowType.SHOW
+                    )
+                )
             }
             listOfShows.sortBy { it.name }
             listOfShows
@@ -349,13 +370,15 @@ class EpisodeApi(val source: ShowInfo, timeOut: Int = 10000) {
             var listOfShows = arrayListOf<EpisodeInfo>()
             when {
                 source.url.contains("putlocker") -> {
-                    if(source.type == ShowType.MOVIE) {
+                    if (source.type == ShowType.MOVIE) {
                         val info = "var post = \\{\"id\":\"(.*?)\"\\};".toRegex().toPattern().matcher(doc.html())
-                        if(info.find()) {
-                            listOfShows.add(EpisodeInfo(
-                                name,
-                                "https://www.putlocker.fyi/embed-src/${info.group(1)}"
-                            ))
+                        if (info.find()) {
+                            listOfShows.add(
+                                EpisodeInfo(
+                                    name,
+                                    "https://www.putlocker.fyi/embed-src/${info.group(1)}"
+                                )
+                            )
                         }
                     } else {
                         val rowList = doc.select("div.col-lg-12").select("div.row")

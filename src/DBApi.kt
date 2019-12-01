@@ -25,7 +25,13 @@ object DbSettings {
             else -> Database.connect("jdbc:sqlite:$dbPath", "org.sqlite.JDBC")
         }*/
         //Database.connect(System.getenv("JDBC_DATABASE_URL"), driver = "org.postgresql.Driver")
-        Database.connect("jdbc:sqlite:$dbPath", "org.sqlite.JDBC")
+        //Database.connect("jdbc:sqlite:$dbPath", "org.sqlite.JDBC")
+        Database.connect(
+            "jdbc:mysql://showinformation.cbmxwu2ycoym.us-east-2.rds.amazonaws.com:3306/showepisodes?useSSL=false",
+            driver = "com.mysql.jdbc.Driver",
+            user = "admin",
+            password = "VHYSaTAvhkvh6rpDTnAh"
+        )
     }
 }
 
