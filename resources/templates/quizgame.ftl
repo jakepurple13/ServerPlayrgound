@@ -276,7 +276,8 @@
                 }
             });
         }
-        if("${data.highScoreLink}" !== "") {
+
+        if ("${data.highScoreLink}" !== "") {
             highScoreListSetup();
         }
 
@@ -365,7 +366,7 @@
         document.getElementById("startGame").onclick = startGame;
         document.getElementById("closeGame").onclick = closeGame;
         document.getElementById("submitScore").onclick = submitHighScore;
-        if("${data.postHighScoreLink}" !== "") {
+        if ("${data.postHighScoreLink}" !== "") {
             document.getElementById("submitScore").hidden = true;
         }
 

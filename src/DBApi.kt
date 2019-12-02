@@ -206,6 +206,53 @@ private fun addAllShowInformation(db: Database, list: List<ShowInfo>) {
     }
 }
 
+private fun updateShowInfo(db: Database, list: List<ShowInfo>) {
+    transaction(db) {
+        for ((j, i) in list.withIndex()) {
+            try {
+                val s = if (Show.find { Shows.url eq i.url }.empty()) {
+                    Shows.insertAndGetId {
+                        it[name] = i.name
+                        it[url] = i.url
+                    }
+                } else {
+                    Show.find { Shows.url eq i.url }.toList()[0].id
+                }
+                val episodeApi = EpisodeApi(i, 30000)
+                val e = if (Episode.find { Episodes.show eq s }.empty()) {
+                    Episode.newEpisodes(s, episodeApi)
+                } else {
+                    Episode.find { Episodes.show eq s }.toList()[0].id
+                }
+                val epl = episodeApi.episodeList
+                for (li in epl) {
+                    if (EpisodeList.find { EpisodeLists.url eq li.url }.empty()) {
+                        EpisodeLists.insert {
+                            it[name] = li.name
+                            it[url] = li.url
+                            it[episode] = e
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                commit()
+                continue
+            } finally {
+                commit()
+                /*commit()
+                continue*/
+            }
+        }
+    }
+}
+
+fun updateShowStuff(db: Database, list: List<ShowInfo>) = GlobalScope.launch {
+    transaction(db) {
+        prettyLog("Size is ${list.size}")
+        updateShowInfo(db, list)
+    }
+}
+
 fun createEverything(db: Database, list: List<ShowInfo>) = GlobalScope.launch {
 
     transaction(db) {
@@ -242,15 +289,15 @@ fun addNewShow(db: Database, show: ShowInfo) {
     }
 }
 
-fun updateShows(db: ShowDBApi) = GlobalScope.launch {
-    transaction(db.db) {
+fun updateShows(db: Database) = GlobalScope.launch {
+    transaction(db) {
 
         val list = ShowApi.getAllRecent()
 
         for ((j, i) in list.withIndex()) {
             val s = Show.find { Shows.url eq i.url }.toList()
             if (s.isEmpty()) {
-                addNewShow(db.db, i)
+                addNewShow(db, i)
                 continue
             }
             try {

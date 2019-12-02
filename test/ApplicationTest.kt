@@ -9,9 +9,80 @@ import kotlinx.html.*
 import kotlinx.html.stream.createHTML
 import java.io.File
 import kotlin.collections.set
+import kotlin.random.Random
 import kotlin.test.Test
 
+
 class ApplicationTest {
+
+    // The math function. The algorithm will be searching for the max value of it across the infinity.
+    fun f(x: Int): Int = -(x - 3) * (x - 3) + 5
+    //Two different ways to do this
+    //val f: (Int) -> Int = { x -> -(x - 3) * (x - 3) + 5 }
+
+    inner class Answer(parent: Answer? = null) : Comparable<Answer> {
+        var x = 0
+
+        init {
+            x = parent?.let { it.x + Random.nextInt(-5, 5) } ?: Random.nextInt(-100, 100)
+        }
+
+        override fun compareTo(other: Answer): Int = f(x).compareTo(f(other.x))
+    }
+
+    fun main() {
+        var s = ""
+        val populationSize = 10
+        val iterations = 20
+        var population = mutableListOf<Answer>()
+        for (i in 0..populationSize) {
+            population.add(Answer())
+        }
+        for (i in 0..iterations) {
+            for (j in 0..populationSize) {
+                population.add(Answer(population[j]))
+            }
+            population.sortDescending()
+            population = population.subList(0, populationSize)
+            s += "${population.map { Pair(it.x, f(it.x)) }.joinToString("\t\t")}\n"
+        }
+        val x = population[0].x
+        println("$s\nAnswer found: ($x, ${f(x)}).")
+    }
+
+    @Test
+    fun geneticEvolutionCode() {
+        main()
+    }
+
+    fun <T> T?.ifNull(block: () -> Unit) = if (this == null) block().let { true } else false
+    fun <T> T?.ifNotNull(block: T.() -> Unit) = if (this != null) block().let { true } else false
+    infix fun Boolean.orElse(elseBlock: () -> Unit) = elseBlock()
+
+    fun smallLittleFunctionTest() {
+        val f: Int? = null
+        f.ifNotNull {
+            //stuff happens here
+        } orElse {
+
+        }
+
+        f.ifNull {
+
+        } orElse {
+
+        }
+    }
+
+    private suspend fun relocate() = 4
+    private suspend fun locate() {
+        val f: Int? = null
+        f.ifNotNull {
+            //relocate() //<-- error that its not in a suspend function
+        } orElse {
+            //relocate() //<-- error that its not in a suspend function
+        }
+    }
 
     @Test
     fun syncTest() {
@@ -29,6 +100,7 @@ class ApplicationTest {
         ChatServer.MessageType.values().random().apply { prettyLog(this) }
         ChatServer.MessageType::class.random().apply { prettyLog(this) }*/
         data class Contact(val name: String, val phone: String)
+
         data class Car(val name: String, val brand: String)
         data class Phone(val name: String, val brand: String)
 
@@ -96,6 +168,21 @@ class ApplicationTest {
 
     private fun String.findRegex(string: String, groupNumber: Int = 1) =
         toRegex().find(string)?.groupValues?.getOrNull(groupNumber)
+
+    @Test
+    fun asdf() {
+        val f = createHTML(true)
+            .html {
+                head {
+                    +"Header"
+                }
+                body {
+                    +"Here in the body!"
+                }
+            }
+
+        prettyLog(f)
+    }
 
     @Test
     fun fiboTest() {
@@ -232,6 +319,17 @@ class ApplicationTest {
     private fun doubleSpeak2(s: String) = s.map { "$it$it" }.joinToString("")
 
     private fun String.doubleSpeaking() = map { "$it$it" }.joinToString("")
+
+    private fun doubleSpeak3(s: String) = s.replace(".".toRegex(), "$0$0")
+
+    private fun String.doubleSpeaking2() = replace(Regex("."), "$0$0")
+
+    @Test
+    fun doubled() {
+        val helloWorld = "Hello World! How are you doing?"
+        prettyLog(doubleSpeak3(helloWorld))
+        prettyLog(helloWorld.doubleSpeaking2())
+    }
 
     /**
     https://codegolf.stackexchange.com/questions/188988/ddoouubbllee-ssppeeaakk

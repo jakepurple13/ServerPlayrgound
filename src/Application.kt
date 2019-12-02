@@ -3,10 +3,6 @@
 package com.example
 
 import com.fasterxml.jackson.databind.SerializationFeature
-import com.google.auth.oauth2.GoogleCredentials
-import com.google.firebase.FirebaseApp
-import com.google.firebase.FirebaseOptions
-import com.google.firebase.cloud.FirestoreClient
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import dorkbox.notify.Notify
@@ -56,10 +52,11 @@ import okhttp3.Request
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.io.File
-import java.io.FileInputStream
 import java.text.SimpleDateFormat
 import java.time.Duration
 import java.util.concurrent.TimeUnit
+import kotlin.time.ExperimentalTime
+import kotlin.time.hours
 
 
 fun main() {
@@ -195,6 +192,7 @@ private fun Application.timeSave(highScoreFile: File, db: Database) {
     }
 }
 
+@UseExperimental(ExperimentalTime::class)
 private fun Application.database(db: Database) {
 
     /*GlobalScope.launch {
@@ -222,7 +220,8 @@ private fun Application.database(db: Database) {
         //createEverything(db, ShowApi.getSources(Source.LIVE_ACTION).take(11))
         //createEverything(db, ShowApi.getSources(Source.ANIME, Source.DUBBED, Source.CARTOON, Source.CARTOON_MOVIES, Source.LIVE_ACTION))
         //createEverything(db, ShowApi.getSources(Source.CARTOON_MOVIES, Source.LIVE_ACTION_MOVIES))
-        createEverything(db, ShowApi.getEverything())
+        //createEverything(db, ShowApi.getEverything())
+        //updateShowStuff(db, ShowApi.getSources(Source.LIVE_ACTION_MOVIES))
         Notify.create()
             .title("Finished")
             .text("Finished getting sources")
@@ -230,12 +229,12 @@ private fun Application.database(db: Database) {
             .hideAfter(3000)
             .show()
     }
-    /*GlobalScope.launch {
+    GlobalScope.launch {
         while (true) {
-            delay(3600000L)
-            //updateShows(db)
+            delay(12.hours.toLongMilliseconds())
+            updateShows(db)
         }
-    }*/
+    }
 }
 
 private fun Application.monitoring(highScoreFile: File) {
@@ -375,7 +374,7 @@ private fun Application.routing(dbApi: ShowDBApi, simpleJwt: SimpleJWT) {
                 when (call.parameters["action"]!!) {
                     "update" -> {
                         getOrUpdateShows {
-                            updateShows(dbApi)
+                            updateShows(dbApi.db)
                         }
                     }
                     "get" -> {
