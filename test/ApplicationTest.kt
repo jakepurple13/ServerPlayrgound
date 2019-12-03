@@ -15,6 +15,27 @@ import kotlin.test.Test
 
 class ApplicationTest {
 
+    @Test
+    fun putMovTest() {
+        /*val f = ShowApi(Source.LIVE_ACTION_MOVIES).showInfoList
+        prettyLog(f.size)
+        prettyLog(f.filter { it.name.contains("SpaceBalls", ignoreCase = true) })*/
+        val g = EpisodeApi(ShowInfo("Spaceballs", "https://www.putlocker.fyi/spaceballs", ShowType.MOVIE))
+        prettyLog(g)
+        val s = g.episodeList.firstOrNull()?.url?.let {
+            prettyLog(it)
+            VideoLinkApi(it).getVideoLink()
+        }
+        prettyLog(s)
+        val f = ShowApi.getSources(Source.LIVE_ACTION).getEpisodeApi(0)
+        prettyLog(f)
+        val s1 = f.episodeList.firstOrNull()?.url?.let {
+            prettyLog(it)
+            VideoLinkApi(it).getVideoLink()
+        }
+        prettyLog(s1)
+    }
+
     // The math function. The algorithm will be searching for the max value of it across the infinity.
     fun f(x: Int): Int = -(x - 3) * (x - 3) + 5
     //Two different ways to do this
@@ -259,11 +280,11 @@ class ApplicationTest {
     }
 
     private fun String.frame(
-        top: String = "*",
-        bottom: String = top,
-        left: String = "*",
-        right: String = left,
-        rtl: Boolean = false
+            top: String = "*",
+            bottom: String = top,
+            left: String = "*",
+            right: String = left,
+            rtl: Boolean = false
     ): String {
         val s = replace("\n", " ").split(" ")
         val fullLength = s.maxBy { it.length }!!.length
@@ -275,13 +296,13 @@ class ApplicationTest {
     }
 
     private fun String.frame(
-        topBottom: String = "*",
-        sides: String = "*",
-        topLeft: String = "*",
-        topRight: String = "*",
-        bottomLeft: String = "*",
-        bottomRight: String = "*",
-        rtl: Boolean = false
+            topBottom: String = "*",
+            sides: String = "*",
+            topLeft: String = "*",
+            topRight: String = "*",
+            bottomLeft: String = "*",
+            bottomRight: String = "*",
+            rtl: Boolean = false
     ): String {
         val s = replace("\n", " ").split(" ")
         val fullLength = s.maxBy { it.length }!!.length
@@ -294,15 +315,15 @@ class ApplicationTest {
     }
 
     private fun String.frame(
-        top: String = "*",
-        bottom: String = top,
-        left: String = "*",
-        right: String = left,
-        topLeft: String = "*",
-        topRight: String = "*",
-        bottomLeft: String = "*",
-        bottomRight: String = "*",
-        rtl: Boolean = false
+            top: String = "*",
+            bottom: String = top,
+            left: String = "*",
+            right: String = left,
+            topLeft: String = "*",
+            topRight: String = "*",
+            bottomLeft: String = "*",
+            bottomRight: String = "*",
+            rtl: Boolean = false
     ): String {
         val s = replace("\n", " ").split(" ")
         val fullLength = s.maxBy { it.length }!!.length
@@ -345,8 +366,8 @@ class ApplicationTest {
     @Test
     fun putMovie() {
         val list = Gson().fromJson<MutableList<ShowInfo>>(
-            File("resources/database/movie.json").readText(),
-            object : TypeToken<MutableList<ShowInfo>>() {}.type
+                File("resources/database/movie.json").readText(),
+                object : TypeToken<MutableList<ShowInfo>>() {}.type
         )
         val e = list.randomShow()
         prettyLog(e)

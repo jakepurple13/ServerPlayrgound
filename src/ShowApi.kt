@@ -3,22 +3,12 @@
 package com.example
 
 import com.google.gson.Gson
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import org.json.simple.JSONObject
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
-import org.jsoup.nodes.Element
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
-import java.net.SocketTimeoutException
 import java.net.URL
-import java.util.*
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
-import kotlin.collections.ArrayList
 
 enum class ShowType {
     MOVIE,
@@ -82,25 +72,18 @@ open class ShowInfo(val name: String, val url: String, internal var type: ShowTy
 class ShowApi(private val source: Source) {
 
     companion object {
-        fun getAll() =
-            getSources(Source.ANIME, Source.CARTOON, Source.CARTOON_MOVIES, Source.DUBBED, Source.LIVE_ACTION)
-
-        fun getAllMovies(): List<ShowInfo> =
-            getSources(Source.CARTOON_MOVIES, Source.ANIME_MOVIES, Source.LIVE_ACTION_MOVIES)
-
-        fun getAllRecent(): List<ShowInfo> =
-            getSources(Source.RECENT_ANIME, Source.RECENT_CARTOON, Source.RECENT_LIVE_ACTION)
-
-        fun getEverything(): List<ShowInfo> = getSources(
-            Source.ANIME,
-            Source.CARTOON,
-            Source.CARTOON_MOVIES,
-            Source.DUBBED,
-            Source.LIVE_ACTION,
-            Source.LIVE_ACTION_MOVIES
-        )
-
+        fun getAll() = getSources(Source.ANIME, Source.CARTOON, Source.CARTOON_MOVIES, Source.DUBBED, Source.LIVE_ACTION)
+        fun getAllMovies(): List<ShowInfo> = getSources(Source.CARTOON_MOVIES, Source.ANIME_MOVIES, Source.LIVE_ACTION_MOVIES)
+        fun getAllRecent(): List<ShowInfo> = getSources(Source.RECENT_ANIME, Source.RECENT_CARTOON, Source.RECENT_LIVE_ACTION)
         fun getSources(vararg source: Source): List<ShowInfo> = source.map { ShowApi(it).showInfoList }.flatten()
+        fun getEverything(): List<ShowInfo> = getSources(
+                Source.ANIME,
+                Source.CARTOON,
+                Source.CARTOON_MOVIES,
+                Source.DUBBED,
+                Source.LIVE_ACTION,
+                Source.LIVE_ACTION_MOVIES
+        )
     }
 
     private var doc: Document = Jsoup.connect(source.link).get()
@@ -134,9 +117,9 @@ class ShowApi(private val source: Source) {
             val lastPage = listPage[listPage.size - 2].text().toInt()
             (1..lastPage).pmap {
                 if (it == 1) getMovieFromPage(page) else getMovieFromPage(
-                    Jsoup.connect(
-                        "${Source.LIVE_ACTION_MOVIES.link}page/$it/${p.attr("abs:href").split("/").last()}"
-                    ).get()
+                        Jsoup.connect(
+                                "${Source.LIVE_ACTION_MOVIES.link}page/$it/${p.attr("abs:href").split("/").last()}"
+                        ).get()
                 )
             }.flatten()
         }.flatten()
@@ -144,9 +127,9 @@ class ShowApi(private val source: Source) {
 
     private fun gogoAnimeAll(): List<ShowInfo> = doc.allElements.select("ul.arrow-list").select("li").map {
         ShowInfo(
-            it.text(),
-            it.select("a[href^=http]").attr("abs:href"),
-            if (source.movie) ShowType.MOVIE else ShowType.SHOW
+                it.text(),
+                it.select("a[href^=http]").attr("abs:href"),
+                if (source.movie) ShowType.MOVIE else ShowType.SHOW
         )
     }
 
@@ -212,7 +195,7 @@ class EpisodeApi(val source: ShowInfo, timeOut: Int = 10000) {
     val description: String = when (ShowSource.getSourceType(source.url)) {
         ShowSource.PUTLOCKER -> try {
             val imdb = getAPIRequest<IMDB>("http://www.omdbapi.com/?t=$name&plot=full&apikey=e91b86ee")
-            check(imdb != null) { throw Exception("Cannot be null") }
+            check(imdb != null && imdb.Year != null) { throw Exception("Cannot be null") }
             "Years Active: ${imdb.Year}\nReleased: ${imdb.Released}\n${imdb.Plot}"
         } catch (e: Exception) {
             var textToReturn = ""
@@ -245,6 +228,9 @@ class EpisodeApi(val source: ShowInfo, timeOut: Int = 10000) {
         ShowSource.NONE -> ""
     }.let { if (it.isNullOrBlank()) "Sorry, an error has occurred" else it }.trim()
 
+    /**
+     * the list of episodes
+     */
     val episodeList: List<EpisodeInfo>
         get() = when (ShowSource.getSourceType(source.url)) {
             ShowSource.PUTLOCKER -> {
@@ -261,23 +247,16 @@ class EpisodeApi(val source: ShowInfo, timeOut: Int = 10000) {
             }
             ShowSource.GOGOANIME -> doc.select("ul.check-list").select("li").map {
                 val urlInfo = it.select("a[href^=http]")
-                val epName =
-                    urlInfo.text().let { info -> if (info.contains(name)) info.substring(name.length) else info }
-                        .trim()
+                val epName = urlInfo.text().let { info -> if (info.contains(name)) info.substring(name.length) else info }.trim()
                 EpisodeInfo(epName, urlInfo.attr("abs:href"))
             }.distinctBy(EpisodeInfo::name)
             ShowSource.ANIMETOON -> {
                 fun getStuff(document: Document) =
                     document.allElements.select("div#videos").select("a[href^=http]").map {
-                        EpisodeInfo(
-                            it.text(),
-                            it.attr("abs:href")
-                        )
+                        EpisodeInfo(it.text(), it.attr("abs:href"))
                     }
                 getStuff(doc) + doc.allElements.select("ul.pagination").select(" button[href^=http]").map {
-                    getStuff(
-                        Jsoup.connect(it.attr("abs:href")).get()
-                    )
+                    getStuff(Jsoup.connect(it.attr("abs:href")).get())
                 }.flatten()
             }
             ShowSource.NONE -> emptyList()
@@ -294,70 +273,35 @@ class EpisodeApi(val source: ShowInfo, timeOut: Int = 10000) {
 class EpisodeInfo(name: String, url: String) : ShowInfo(name, url)
 
 class VideoLinkApi(private val url: String) {
-    fun getVideoLink(): String {
-        if (url.contains("putlocker")) {
-            val firstHtml = getHtml(url)
-            if (firstHtml != null) {
-                val d = "<iframe[^>]+src=\"([^\"]+)\"[^>]*><\\/iframe>".toRegex().toPattern().matcher(firstHtml)
-                if (d.find()) {
-                    val secondHtml = getHtml(d.group(1)!!)
-                    if (secondHtml != null) {
-                        val a = "<p[^>]+id=\"videolink\">([^>]*)<\\/p>".toRegex().toPattern().matcher(secondHtml)
-                        if (a.find()) {
-                            return "https://verystream.com/gettoken/${a.group(1)!!}?mime=true"
-                        }
-                    } else {
-                        return "Unable to get"
-                    }
-                }
-            } else {
-                return "Unable to get"
-            }
-        } else if (url.contains("gogoanime")) {
-            val doc = Jsoup.connect(url).get()
-            return doc.select("a[download^=http]").attr("abs:download")
-        } else {
-            val episodeHtml = getHtml(url)
-            if (episodeHtml != null) {
-                val matcher = "<iframe src=\"([^\"]+)\"[^<]+<\\/iframe>".toRegex().toPattern().matcher(episodeHtml)
-                val list = arrayListOf<String>()
-                while (matcher.find()) {
-                    list.add(matcher.group(1)!!)
-                }
-
-                val videoHtml = getHtml(list[0])
-                if (videoHtml != null) {
-                    val reg = "var video_links = (\\{.*?\\});".toRegex().toPattern().matcher(videoHtml)
-                    if (reg.find()) {
-                        val d = reg.group(1)
-                        val g = Gson()
-                        val d1 = g.fromJson(d, NormalLink::class.java)
-
-                        return d1.normal!!.storage!![0].link!!
-                    }
-                } else {
-                    return "Unable to get"
-                }
-            }
-            return "Unable to get"
+    fun getVideoLink(): String = when (ShowSource.getSourceType(url)) {
+        ShowSource.PUTLOCKER -> {
+            val d = "<iframe[^>]+src=\"([^\"]+)\"[^>]*><\\/iframe>".toRegex().toPattern().matcher(getHtml(url))
+            if (d.find()) {
+                val a = "<p[^>]+id=\"videolink\">([^>]*)<\\/p>".toRegex().toPattern().matcher(Jsoup.connect(d.group(1)!!).get().html())
+                if (a.find()) "https://verystream.com/gettoken/${a.group(1)!!}?mime=true" else ""
+            } else ""
         }
-        return ""
+        ShowSource.GOGOANIME -> Jsoup.connect(url).get().select("a[download^=http]").attr("abs:download")
+        ShowSource.ANIMETOON -> {
+            val matcher = "<iframe src=\"([^\"]+)\"[^<]+<\\/iframe>".toRegex().toPattern().matcher(Jsoup.connect(url).get().html())
+            var list = ""
+            if (matcher.find()) list = matcher.group(1)!!
+            val reg = "var video_links = (\\{.*?\\});".toRegex().toPattern().matcher(Jsoup.connect(list).get().html())
+            if (reg.find()) Gson().fromJson(reg.group(1), NormalLink::class.java).normal!!.storage!![0].link!! else ""
+        }
+        ShowSource.NONE -> ""
     }
 
     @Throws(IOException::class)
-    private fun getHtml(url: String): String? = try {
+    private fun getHtml(url: String): String {
         // Build and set timeout values for the request.
         val connection = URL(url).openConnection()
         connection.connectTimeout = 5000
         connection.readTimeout = 5000
-        connection.setRequestProperty(
-            "User-Agent",
-            "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0"
-        )
+        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0")
         connection.addRequestProperty("Accept-Language", "en-US,en;q=0.5")
         connection.addRequestProperty("Referer", "http://thewebsite.com")
         connection.connect()
-
         // Read and store the result line by line then return the entire string.
         val in1 = connection.getInputStream()
         val reader = BufferedReader(InputStreamReader(in1))
@@ -369,48 +313,46 @@ class VideoLinkApi(private val url: String) {
         }
         in1.close()
 
-        html.toString()
-    } catch (e: SocketTimeoutException) {
-        null
+        return html.toString()
     }
 }
 
 internal class NormalLink(var normal: Normal? = null)
 internal class Normal(var storage: Array<Storage>? = emptyArray())
 data class Storage(
-    var sub: String? = null,
-    var source: String? = null,
-    var link: String? = null,
-    var quality: String? = null,
-    var filename: String? = null
+        var sub: String? = null,
+        var source: String? = null,
+        var link: String? = null,
+        var quality: String? = null,
+        var filename: String? = null
 )
 
 data class IMDB(
-    val Title: String?,
-    val Year: String?,
-    val Rated: String?,
-    val Released: String?,
-    val Runtime: String?,
-    val Genre: String?,
-    val Director: String?,
-    val Writer: String?,
-    val Actors: String?,
-    val Plot: String?,
-    val Language: String?,
-    val Country: String?,
-    val Awards: String?,
-    val Poster: String?,
-    val Ratings: List<Ratings>?,
-    val Metascore: String?,
-    val imdbRating: String?,
-    val imdbVotes: String?,
-    val imdbID: String?,
-    val Type: String?,
-    val DVD: String?,
-    val BoxOffice: String?,
-    val Production: String?,
-    val Website: String?,
-    val Response: String?
+        val Title: String?,
+        val Year: String?,
+        val Rated: String?,
+        val Released: String?,
+        val Runtime: String?,
+        val Genre: String?,
+        val Director: String?,
+        val Writer: String?,
+        val Actors: String?,
+        val Plot: String?,
+        val Language: String?,
+        val Country: String?,
+        val Awards: String?,
+        val Poster: String?,
+        val Ratings: List<Ratings>?,
+        val Metascore: String?,
+        val imdbRating: String?,
+        val imdbVotes: String?,
+        val imdbID: String?,
+        val Type: String?,
+        val DVD: String?,
+        val BoxOffice: String?,
+        val Production: String?,
+        val Website: String?,
+        val Response: String?
 )
 
 data class Ratings(val Source: String?, val Value: String?)

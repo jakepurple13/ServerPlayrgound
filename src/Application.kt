@@ -341,7 +341,8 @@ private fun Application.routing(dbApi: ShowDBApi, simpleJwt: SimpleJWT) {
                 val episode: EpisodeApiInfo? = dbApi.getEpisodeInfo(name)
 
                 if (episode != null)
-                    call.respond(FreeMarkerContent("epview.ftl", mapOf("data" to episode)))
+                    /*call.respond(FreeMarkerContent("epview.ftl", mapOf("data" to episode)))*/
+                    call.respond(FreeMarkerContent("nicelookingshow.ftl", mapOf("data" to episode)))
                 else
                     notFound("Show not found")
             }
@@ -410,7 +411,8 @@ private fun Application.routing(dbApi: ShowDBApi, simpleJwt: SimpleJWT) {
                     else -> null
                 }?.map { "$it" }
                 if (!checkLevel.isNullOrEmpty()) {
-                    call.respond(FreeMarkerContent("table.ftl", mapOf("data" to dbApi.getAlphabet(checkLevel))))
+                    /*call.respond(FreeMarkerContent("table.ftl", mapOf("data" to dbApi.getAlphabet(checkLevel))))*/
+                    call.respond(FreeMarkerContent("nicelookingletter.ftl", mapOf("data" to dbApi.getAlphabet(checkLevel))))
                 } else {
                     notFound("Unable to Retrieve")
                 }
@@ -473,7 +475,6 @@ inline fun <reified T> getAPIRequest(url: String, requestConfig: Request.Builder
         .url(url)
         .requestConfig()
         .build()
-
     client.newCall(request).execute().use { response ->
         return response.body?.string()?.let {
             Gson().fromJson(it, T::class.java)

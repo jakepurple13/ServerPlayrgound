@@ -46,7 +46,7 @@ class ShowDBApi(val db: Database, val showList: List<ShowInfo>) {
                 val checker: (EpisodeApiInfo) -> Boolean = if (checkLevel.contains("0")) {
                     { !(it.name.firstOrNull()?.isLetter() ?: true) }
                 } else {
-                    { it.name[0].toString() in checkLevel }
+                    { it.name.firstOrNull()?.let { it.toString() in checkLevel } ?: false  }
                 }
                 var list = listOf<EpisodeApiInfo>()
                 transaction(db) {
