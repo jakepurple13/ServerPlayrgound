@@ -321,6 +321,9 @@
                     <label for="id-of-input" class="custom-checkbox">
                         <input type="checkbox" id="id-of-input"/>
                     </label>
+                    <#list data.genres as i>
+                        <div class="show-genres"><a href="/showgenre/${i}">${i}</a></div>
+                    </#list>
                 </div>
                 <div class="show-desc"><p>${data.description}</p></div>
             </div>

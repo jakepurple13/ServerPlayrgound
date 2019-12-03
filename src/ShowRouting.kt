@@ -182,7 +182,8 @@ data class EpisodeApiInfo(
     val image: String = "",
     val url: String = "",
     val description: String = "",
-    val episodeList: List<EpListInfo> = emptyList()
+    val episodeList: List<EpListInfo> = emptyList(),
+    val genres: List<String> = emptyList()
 )
 
 fun Route.addShowQuiz(db: Database) {

@@ -15,6 +15,23 @@ import kotlin.test.Test
 
 class ApplicationTest {
 
+    private fun List<ShowInfo>.randomShow(): EpisodeApi = EpisodeApi(random())
+
+    @Test
+    fun genreAdder() {
+        val p = ShowApi.getSources(Source.LIVE_ACTION).randomShow().genres
+        val g = ShowApi.getSources(Source.ANIME).randomShow().genres
+        val a = ShowApi.getSources(Source.CARTOON).randomShow().genres
+        prettyLog("$p\n$g\n$a")
+    }
+
+    @Test
+    fun vidTest() {
+        val s = ShowApi.getSources(Source.CARTOON, Source.DUBBED).randomShow().episodeList.random().url
+        val f = VideoLinkApi(s).getVideoLink()
+        prettyLog(f)
+    }
+
     @Test
     fun putMovTest() {
         /*val f = ShowApi(Source.LIVE_ACTION_MOVIES).showInfoList

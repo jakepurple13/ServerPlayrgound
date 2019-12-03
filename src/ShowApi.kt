@@ -161,8 +161,6 @@ class ShowApi(private val source: Source) {
  */
 fun List<ShowInfo>.getEpisodeApi(index: Int): EpisodeApi = EpisodeApi(this[index])
 
-fun List<ShowInfo>.randomShow(): EpisodeApi = EpisodeApi(random())
-
 /**
  * Actual Show information
  */
@@ -188,6 +186,16 @@ class EpisodeApi(val source: ShowInfo, timeOut: Int = 10000) {
         ShowSource.ANIMETOON -> doc.select("div.left_col").select("img[src^=http]#series_image")
         ShowSource.NONE -> null
     }?.attr("abs:src") ?: ""
+
+    /**
+     * the genres of the show
+     */
+    val genres: List<String> = when(ShowSource.getSourceType(source.url)) {
+        ShowSource.PUTLOCKER -> doc.select(".mov-desc").select("p:contains(Genre)")
+        ShowSource.GOGOANIME -> doc.select("div.animeDetail-item:contains(Genres)")
+        ShowSource.ANIMETOON -> doc.select("span.red_box")
+        ShowSource.NONE -> null
+    }?.select("a[href^=http]")?.eachText() ?: emptyList()
 
     /**
      * the description
@@ -277,19 +285,30 @@ class VideoLinkApi(private val url: String) {
         ShowSource.PUTLOCKER -> {
             val d = "<iframe[^>]+src=\"([^\"]+)\"[^>]*><\\/iframe>".toRegex().toPattern().matcher(getHtml(url))
             if (d.find()) {
-                val a = "<p[^>]+id=\"videolink\">([^>]*)<\\/p>".toRegex().toPattern().matcher(Jsoup.connect(d.group(1)!!).get().html())
+                val a = "<p[^>]+id=\"videolink\">([^>]*)<\\/p>".toRegex().toPattern().matcher(getHtml(d.group(1)!!))
                 if (a.find()) "https://verystream.com/gettoken/${a.group(1)!!}?mime=true" else ""
             } else ""
         }
         ShowSource.GOGOANIME -> Jsoup.connect(url).get().select("a[download^=http]").attr("abs:download")
         ShowSource.ANIMETOON -> {
-            val matcher = "<iframe src=\"([^\"]+)\"[^<]+<\\/iframe>".toRegex().toPattern().matcher(Jsoup.connect(url).get().html())
-            var list = ""
-            if (matcher.find()) list = matcher.group(1)!!
-            val reg = "var video_links = (\\{.*?\\});".toRegex().toPattern().matcher(Jsoup.connect(list).get().html())
+            val html = Jsoup.connect(url).get().select("iframe[src^=http]").eachAttr("abs:src").firstOrNullMap {
+                try {
+                    Jsoup.connect(it).get().html()
+                } catch (e: Exception) {
+                    null
+                }
+            } ?: ""
+            val reg = "var video_links = (\\{.*?\\});".toRegex().toPattern().matcher(html)
             if (reg.find()) Gson().fromJson(reg.group(1), NormalLink::class.java).normal!!.storage!![0].link!! else ""
         }
         ShowSource.NONE -> ""
+    }
+
+    private fun <T, R> List<T>.firstOrNullMap(block: (T) -> R?): R? {
+        for(i in this) {
+            return block(i) ?: continue
+        }
+        return null
     }
 
     @Throws(IOException::class)

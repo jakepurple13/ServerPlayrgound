@@ -35,10 +35,10 @@ class ShowDBApi(val db: Database, val showList: List<ShowInfo>) {
                 }
                 showList.filter(checker).map {
                     EpisodeApiInfo(
-                        it.name,
-                        "Something went wrong",
-                        it.url,
-                        "Sorry, something went wrong"
+                            it.name,
+                            "Something went wrong",
+                            it.url,
+                            "Sorry, something went wrong"
                     )
                 }
             }
@@ -46,16 +46,16 @@ class ShowDBApi(val db: Database, val showList: List<ShowInfo>) {
                 val checker: (EpisodeApiInfo) -> Boolean = if (checkLevel.contains("0")) {
                     { !(it.name.firstOrNull()?.isLetter() ?: true) }
                 } else {
-                    { it.name.firstOrNull()?.let { it.toString() in checkLevel } ?: false  }
+                    { it.name.firstOrNull()?.let { it.toString() in checkLevel } ?: false }
                 }
                 var list = listOf<EpisodeApiInfo>()
                 transaction(db) {
                     list = Episodes.selectAll().map {
                         EpisodeApiInfo(
-                            it[Episodes.name],
-                            it[Episodes.image],
-                            it[Episodes.url],
-                            it[Episodes.description]
+                                it[Episodes.name],
+                                it[Episodes.image],
+                                it[Episodes.url],
+                                it[Episodes.description]
                         )
                     }.filter(checker)
                     /*list = Episodes.select {
@@ -126,11 +126,12 @@ class ShowDBApi(val db: Database, val showList: List<ShowInfo>) {
                         e.episodeList.map { EpListInfo(it.name, it.url) })*/
                     episode = EpisodeApi(s).map {
                         EpisodeApiInfo(
-                            name,
-                            image,
-                            source.url,
-                            description,
-                            episodeList.map { EpListInfo(it.name, it.url) })
+                                name,
+                                image,
+                                source.url,
+                                description,
+                                episodeList.map { EpListInfo(it.name, it.url) },
+                                genres)
                     }
                 }
             }
@@ -151,11 +152,11 @@ class ShowDBApi(val db: Database, val showList: List<ShowInfo>) {
                             val list = EpisodeLists.select { EpisodeLists.episode eq e[0][Episodes.id] }
                                 .map { EpListInfo(it[EpisodeLists.name], it[EpisodeLists.url]) }
                             episode = EpisodeApiInfo(
-                                e[0][Episodes.name],
-                                e[0][Episodes.image],
-                                e[0][Episodes.url],
-                                e[0][Episodes.description],
-                                list
+                                    e[0][Episodes.name],
+                                    e[0][Episodes.image],
+                                    e[0][Episodes.url],
+                                    e[0][Episodes.description],
+                                    list
                             )
                         }
                     } catch (ignored: Exception) {
