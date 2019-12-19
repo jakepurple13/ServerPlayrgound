@@ -7,13 +7,51 @@ import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.runBlocking
 import kotlinx.html.*
 import kotlinx.html.stream.createHTML
+import okhttp3.internal.toHexString
 import java.io.File
 import kotlin.collections.set
 import kotlin.random.Random
+import kotlin.reflect.KCallable
+import kotlin.reflect.full.memberFunctions
+import kotlin.reflect.full.memberProperties
 import kotlin.test.Test
+import kotlin.test.assertEquals
 
 
 class ApplicationTest {
+
+    //I/bcip: Handle CRESNET_CORE3_UI_SMART_OBJECT 0x38-00-00-42-cc-0e-15-00-00-03-41-64-64-20-6e-65-77-2e-2e-2e-
+    //D/ConnectionMgrIplink: handleSmartObjectSerialChanged: 17100.1 / Add new...
+
+    @Test
+    fun charthing() {
+        val word: (String) -> String = { it.split("-").map { it.toInt(16).toChar() }.joinToString("") }
+        val hex: (String) -> String = { it.toCharArray().map { it.toInt().toHexString() }.joinToString("-") }
+        val f = word("00-00-42-cc-0e-15-00-00-03-41-64-64-20-6e-65-77-2e-2e-2e")
+        prettyLog(f)
+        val f1 = word("00-00-42-cc-0e-15-00-00-03")
+        prettyLog(f1)
+        val f2 = word("41-64-64-20-6e-65-77-2e-2e-2e")
+        prettyLog(f2)
+        val f3 = hex(f2)
+        prettyLog(f3)
+        assertEquals("Add new...", f2, "These two should be equal")
+        assertEquals("41-64-64-20-6e-65-77-2e-2e-2e", f3, "These two should be equal")
+    }
+
+    private fun stringFun(s: String) {
+        val word: (String) -> String = { it.split("-").map { it.toIntOrNull(16)?.toChar() }.joinToString("") }
+        val hex: (String) -> String = { it.toCharArray().map { it.toInt().toHexString() }.joinToString("-") }
+        val f = word(s)
+        prettyLog(f)
+        val f3 = hex(s)
+        prettyLog(f3)
+    }
+
+    @Test
+    fun singing() {
+        stringFun("3928-38-00-00-42-cc-22-15-00-03-03-43-72-65-73-74-72-6f-6e-57-41-50-5f-45-59-49-4e-5f-63-6f-6c-69-6e-73-2d-74-70-6c-69-")
+    }
 
     private fun List<ShowInfo>.randomShow(): EpisodeApi = EpisodeApi(random())
 
@@ -350,6 +388,195 @@ class ApplicationTest {
         }
         return "$topLeft${top.repeat(fullLength + 2)}$topRight\n$mid\n$bottomLeft${bottom.repeat(fullLength + 2)}$bottomRight"
     }
+
+    class Frame internal constructor(
+            var top: String = "", var bottom: String = "",
+            var left: String = "", var right: String = "",
+            var topLeft: String = "", var topRight: String = "",
+            var bottomLeft: String = "", var bottomRight: String = "",
+            var topFillIn: String = "", var bottomFillIn: String = ""
+    )
+
+    enum class FrameType(val frame: Frame) {
+        /**
+         * BOX Frame
+         * Will look like this
+         *
+        ```
+        ╔==========================╗
+        ║ Hello World              ║
+        ╚==========================╝
+        or
+        If the top if modified
+        ╔==========Hello===========╗
+        ║ World                    ║
+        ╚==========================╝
+        or
+        If the bottom is modified
+        ╔==========================╗
+        ║ World                    ║
+        ╚==========Hello===========╝
+        ```
+         */
+        BOX(Frame("=", "=", "║", "║", "╔", "╗", "╚", "╝", "=", "=")),
+        /**
+         * ASTERISK Frame
+         * Will look like this
+         *
+        ```
+        1.   ****************************
+        2.   * Hello World              *
+        3.   ****************************
+        or
+        If the top if modified
+        1.   ***********Hello************
+        2.   * World                    *
+        3.   ****************************
+        or
+        If the bottom is modified
+        1.   ****************************
+        2.   * World                    *
+        3.   ***********Hello************
+        ```
+         */
+        ASTERISK(Frame("*", "*", "*", "*", "*", "*", "*", "*", "*", "*")),
+        /**
+         * Plus Frame
+         * Will look like this
+         *
+        ```
+        ++++++++++++++++++++++++++++
+        + Hello World              +
+        ++++++++++++++++++++++++++++
+        or
+        If the top if modified
+        +++++++++++Hello++++++++++++
+        + World                    +
+        ++++++++++++++++++++++++++++
+        or
+        If the bottom is modified
+        ++++++++++++++++++++++++++++
+        + World                    +
+        +++++++++++Hello++++++++++++
+        ```
+         */
+        PLUS(Frame("+", "+", "+", "+", "+", "+", "+", "+", "+", "+")),
+        /**
+         * DIAGONAL Frame
+         * Will look like this
+         *
+        ```
+        ╱--------------------------╲
+        | Hello World              |
+        ╲--------------------------╱
+        or
+        If the top if modified
+        ╱----------Hello-----------╲
+        | World                    |
+        ╲--------------------------╱
+        or
+        If the bottom is modified
+        ╱--------------------------╲
+        | World                    |
+        ╲----------Hello-----------╱
+        ```
+         */
+        DIAGONAL(Frame("-", "-", "│", "│", "╱", "╲", "╲", "╱", "-", "-")),
+        /**
+         * OVAL Frame
+         * Will look like this
+         *
+        ```
+        ╭--------------------------╮
+        | Hello World              |
+        ╰--------------------------╯
+        or
+        If the top if modified
+        ╭----------Hello-----------╮
+        | World                    |
+        ╰--------------------------╯
+        or
+        If the bottom is modified
+        ╭--------------------------╮
+        | World                    |
+        ╰----------Hello-----------╯
+        ```
+         */
+        OVAL(Frame("-", "-", "│", "│", "╭", "╮", "╰", "╯", "-", "-")),
+        /**
+         * BOXED Frame
+         * Will look like this
+         *
+        ```
+        ▛▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▜
+        ▌ Hello World              ▐
+        ▙▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▟
+        or
+        If the top if modified
+        ▛▀▀▀▀▀▀▀▀▀▀Hello▀▀▀▀▀▀▀▀▀▀▀▜
+        ▌ World                    ▐
+        ▙▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▟
+        or
+        If the bottom is modified
+        ▛▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▜
+        ▌ World                    ▐
+        ▙▄▄▄▄▄▄▄▄▄▄Hello▄▄▄▄▄▄▄▄▄▄▄▟
+        ```
+         */
+        BOXED(Frame("▀", "▄", "▌", "▐", "▛", "▜", "▙", "▟", "▀", "▄")),
+        /**
+         * CUSTOM Frame
+         * You decide how all of it looks
+         */
+        CUSTOM(Frame());
+
+        companion object {
+            /**
+             * Use this to create a custom [FrameType]
+             */
+            fun CUSTOM(frame: Frame.() -> Unit) = CUSTOM.frame.apply(frame)
+        }
+    }
+
+    fun String.frame(frameType: FrameType, rtl: Boolean = false) = listOf(this).frame(
+            top = frameType.frame.top, bottom = frameType.frame.bottom,
+            left = frameType.frame.left, right = frameType.frame.right,
+            topLeft = frameType.frame.topLeft, topRight = frameType.frame.topRight,
+            bottomLeft = frameType.frame.bottomLeft, bottomRight = frameType.frame.bottomRight,
+            topFillIn = frameType.frame.topFillIn, bottomFillIn = frameType.frame.bottomFillIn, rtl = rtl
+    )
+
+    fun <T> Collection<T>.frame(frameType: FrameType, rtl: Boolean = false, transform: (T) -> String = { it.toString() }) =
+        frame(
+                top = frameType.frame.top, bottom = frameType.frame.bottom,
+                left = frameType.frame.left, right = frameType.frame.right,
+                topLeft = frameType.frame.topLeft, topRight = frameType.frame.topRight,
+                bottomLeft = frameType.frame.bottomLeft, bottomRight = frameType.frame.bottomRight,
+                topFillIn = frameType.frame.topFillIn, bottomFillIn = frameType.frame.bottomFillIn, rtl = rtl, transform = transform
+        )
+
+    fun <T> Collection<T>.frame(
+            top: String, bottom: String,
+            left: String, right: String,
+            topLeft: String, topRight: String,
+            bottomLeft: String, bottomRight: String,
+            topFillIn: String = "", bottomFillIn: String = "",
+            rtl: Boolean = false, transform: (T) -> String = { it.toString() }
+    ): String {
+        val fullLength = mutableListOf(top, bottom).apply { addAll(this@frame.map(transform)) }.maxBy { it.length }!!.length + 2
+        val space: (String) -> String = { " ".repeat(fullLength - it.length - 1) }
+        val mid = joinToString(separator = "\n") { "$left${if (rtl) space(transform(it)) else " "}$it${if (rtl) " " else space(transform(it))}$right" }
+        val space2: (String, Boolean) -> String = { spacing, b -> (if (b) topFillIn else bottomFillIn).repeat((fullLength - spacing.length) / 2) }
+        val topBottomText: (String, Boolean) -> String = { s, b ->
+            if (s.length == 1) s.repeat(fullLength)
+            else space2(s, b).let { spaced -> "$spaced$s${if ((fullLength - s.length) % 2 == 0) "" else (if (b) topFillIn else bottomFillIn)}$spaced" }
+        }
+        return "$topLeft${topBottomText(top, true)}$topRight\n$mid\n$bottomLeft${topBottomText(bottom, false)}$bottomRight"
+    }
+
+    private val toInfoString: (KCallable<*>) -> Pair<String, String> = { it.name to it.returnType.toString() }
+    private inline fun <reified T : Any> getMethodNames(): List<Pair<String, String>> = T::class.java.kotlin.memberFunctions.map(toInfoString)
+    private inline fun <reified T : Any> getPropertyNames(): List<Pair<String, String>> = T::class.java.kotlin.memberProperties.map(toInfoString)
 
     private fun doubleSpeak(s: String) = s.split("").joinToString("") { it.repeat(2) }
     //HHeelllloo  wwoorrlldd!!  ::))

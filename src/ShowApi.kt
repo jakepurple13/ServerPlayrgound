@@ -9,6 +9,7 @@ import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
 import java.net.URL
+import java.util.*
 
 enum class ShowType {
     MOVIE,
@@ -245,12 +246,15 @@ class EpisodeApi(val source: ShowInfo, timeOut: Int = 10000) {
                 if (source.type == ShowType.MOVIE) {
                     val info = "var post = \\{\"id\":\"(.*?)\"\\};".toRegex().toPattern().matcher(doc.html())
                     if (info.find()) {
-                        listOf(EpisodeInfo(name, "https://www.putlocker.fyi/embed-src/${info.group(1)}"))
+                        val encodingPID = Base64.getEncoder().encodeToString("6${info.group(1)!!.reversed()}".toByteArray())
+                        listOf(EpisodeInfo(name, "https://www.putlocker.fyi/embed-src-v2/$encodingPID"))
                     } else emptyList()
                 } else {
-                    doc.select("div.col-lg-12").select("div.row").select("a.btn-episode").map {
-                        EpisodeInfo(it.attr("title"), "https://www.putlocker.fyi/embed-src/${it.attr("data-pid")}")
-                    }
+                    doc.select("div.col-lg-12").select("div.row").select("a.btn-episode")
+                        .map {
+                            val encodingPID = Base64.getEncoder().encodeToString("6${it.attr("data-pid").reversed()}".toByteArray())
+                            EpisodeInfo(it.attr("title"), "https://www.putlocker.fyi/embed-src-v2/$encodingPID")
+                        }
                 }
             }
             ShowSource.GOGOANIME -> doc.select("ul.check-list").select("li").map {
@@ -281,15 +285,45 @@ class EpisodeApi(val source: ShowInfo, timeOut: Int = 10000) {
 class EpisodeInfo(name: String, url: String) : ShowInfo(name, url)
 
 class VideoLinkApi(private val url: String) {
-    fun getVideoLink(): String = when (ShowSource.getSourceType(url)) {
-        ShowSource.PUTLOCKER -> {
-            val d = "<iframe[^>]+src=\"([^\"]+)\"[^>]*><\\/iframe>".toRegex().toPattern().matcher(getHtml(url))
-            if (d.find()) {
-                val a = "<p[^>]+id=\"videolink\">([^>]*)<\\/p>".toRegex().toPattern().matcher(getHtml(d.group(1)!!))
-                if (a.find()) "https://verystream.com/gettoken/${a.group(1)!!}?mime=true" else ""
-            } else ""
+
+    private fun getGogoAnime() = Jsoup.connect(url).get().select("a[download^=http]").attr("abs:download")
+    private fun getPutLocker(): String = try {
+        val doc = Jsoup.connect(url.trim()).get()
+        val mix = "<iframe[^>]+src=\"([^\"]+)\"[^>]*><\\/iframe>".toRegex().find(doc.toString())!!.groups[1]!!.value
+        val doc2 = Jsoup.connect(mix.trim()).get()
+        val r = "\\}\\('(.+)',(\\d+),(\\d+),'([^']+)'\\.split\\('\\|'\\)".toRegex().find(doc2.toString())!!
+        fun encodeBaseN(num: Int, n: Int): String {
+            var num1 = num
+            val fullTable = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            val table = fullTable.substring(0..n)
+            if (num1 == 0) return table[0].toString()
+            var ret = ""
+            while (num1 > 0) {
+                ret = (table[num1 % n].toString() + ret)
+                num1 = Math.floorDiv(num, n)
+            }
+            return ret
         }
-        ShowSource.GOGOANIME -> Jsoup.connect(url).get().select("a[download^=http]").attr("abs:download")
+        val (obfucastedCode, baseTemp, countTemp, symbolsTemp) = r.destructured
+        val base = baseTemp.toInt()
+        var count = countTemp.toInt()
+        val symbols = symbolsTemp.split("|")
+        val symbolTable = mutableMapOf<String, String>()
+        while (count > 0) {
+            count--
+            val baseNCount = encodeBaseN(count, base)
+            symbolTable[baseNCount] = if (symbols[count].isNotEmpty()) symbols[count] else baseNCount
+        }
+        val unpacked = "\\b(\\w+)\\b".toRegex().replace(obfucastedCode) { symbolTable[it.groups[0]!!.value].toString() }
+        val search = "MDCore\\.v.*?=\"([^\"]+)".toRegex().find(unpacked)!!.groups[1]!!.value
+        "https:$search"
+    } catch (e: Exception) {
+        ""
+    }
+
+    fun getVideoLink(): String = when (ShowSource.getSourceType(url)) {
+        ShowSource.PUTLOCKER -> getPutLocker()
+        ShowSource.GOGOANIME -> getGogoAnime()
         ShowSource.ANIMETOON -> {
             val html = Jsoup.connect(url).get().select("iframe[src^=http]").eachAttr("abs:src").firstOrNullMap {
                 try {
