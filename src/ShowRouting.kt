@@ -133,6 +133,10 @@ fun Route.userApi(db: ShowDBApi) {
             val list = db.getAll()
             call.respond(mapOf("shows" to list))
         }
+        get("/fullInformation.json") {
+            val list = db.getFullShowInfos()
+            call.respond(mapOf("shows" to list))
+        }
         get("/allEpisodes.json") {
             call.respond(mapOf("shows" to getAllEpisodes(db.db)))
         }

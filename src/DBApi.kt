@@ -6,10 +6,7 @@ import org.jetbrains.exposed.dao.EntityID
 import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.IntIdTable
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.SchemaUtils
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.insertAndGetId
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 
 //private const val dbPath = "/Users/jrein/Downloads/kotlin-examples-master/tutorials/mpp-iOS-Android/servertesting/resources/database/takeeight.db"
@@ -319,5 +316,13 @@ fun updateShows(db: Database) = GlobalScope.launch {
 
         }
 
+    }
+}
+
+fun removeAllOfType(db: Database, source: String) = GlobalScope.launch {
+    transaction(db) {
+        EpisodeLists.deleteWhere { EpisodeLists.url like "%$source%" }
+        Episodes.deleteWhere { Episodes.url like "%$source%" }
+        Shows.deleteWhere { Shows.url like "%$source%" }
     }
 }

@@ -25,6 +25,70 @@ class ShowDBApi(val db: Database, val showList: List<ShowInfo>) {
         }
     }
 
+    data class EpisodeInfo(val name: String, val url: String)
+    data class ShowInformation(
+            val name: String = "",
+            val image: String = "",
+            val url: String = "",
+            val description: String = "",
+            val episodeList: List<EpisodeInfo> = emptyList(),
+            val genres: List<String> = emptyList()
+    )
+
+    data class ShowInfoCom(val name: String, val url: String)
+
+    data class FullShowInfo(val showInfoCom: ShowInfoCom, val showInformation: ShowInformation)
+
+    fun getFullShowInfo() = transaction(db) {
+        Shows.selectAll().mapNotNull {
+            try {
+                FullShowInfo(
+                        ShowInfoCom(it[Shows.name], it[Shows.url]),
+                        Episodes.select { Episodes.show eq it[Shows.id] }.map { ep ->
+                            ShowInformation(
+                                    ep[Episodes.name],
+                                    ep[Episodes.image],
+                                    ep[Episodes.url],
+                                    ep[Episodes.description],
+                                    EpisodeLists.select { EpisodeLists.episode eq ep[Episodes.id] }
+                                        .map { EpisodeInfo(it[EpisodeLists.name], it[EpisodeLists.url]) }
+                            )
+                        }[0]
+                )
+            } catch (e: Exception) {
+                null
+            }
+        }.sortedBy { it.showInfoCom.name }
+    }
+
+    fun getFullShowInfos() = transaction(db) {
+        Episodes.selectAll().mapNotNull { ep ->
+            try {
+                /*FullShowInfo(
+                        Shows.select { Shows.id eq ep[Episodes.show] }.map { ShowInfoCom(it[Shows.name], it[Shows.url]) }[0],
+                        ShowInformation(
+                                ep[Episodes.name],
+                                ep[Episodes.image],
+                                ep[Episodes.url],
+                                ep[Episodes.description],
+                                EpisodeLists.select { EpisodeLists.episode eq ep[Episodes.id] }
+                                    .map { EpisodeInfo(it[EpisodeLists.name], it[EpisodeLists.url]) }
+                        )
+                )*/
+                ShowInformation(
+                        ep[Episodes.name],
+                        ep[Episodes.image],
+                        ep[Episodes.url],
+                        ep[Episodes.description],
+                        EpisodeLists.select { EpisodeLists.episode eq ep[Episodes.id] }
+                            .map { EpisodeInfo(it[EpisodeLists.name], it[EpisodeLists.url]) }
+                )
+            } catch (e: Exception) {
+                null
+            }
+        }.filter { it.name.isNotBlank() && !it.description.equals("Sorry, an error has occurred", true) }.sortedBy { it.name }
+    }
+
     fun getAlphabet(checkLevel: List<String>): List<EpisodeApiInfo> {
         return when (showDB) {
             true -> {

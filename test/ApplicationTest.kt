@@ -7,7 +7,11 @@ import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.runBlocking
 import kotlinx.html.*
 import kotlinx.html.stream.createHTML
-import okhttp3.internal.toHexString
+import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.transactions.transaction
+import org.junit.Before
 import java.io.File
 import kotlin.collections.set
 import kotlin.random.Random
@@ -15,43 +19,224 @@ import kotlin.reflect.KCallable
 import kotlin.reflect.full.memberFunctions
 import kotlin.reflect.full.memberProperties
 import kotlin.test.Test
-import kotlin.test.assertEquals
 
 
 class ApplicationTest {
 
-    //I/bcip: Handle CRESNET_CORE3_UI_SMART_OBJECT 0x38-00-00-42-cc-0e-15-00-00-03-41-64-64-20-6e-65-77-2e-2e-2e-
-    //D/ConnectionMgrIplink: handleSmartObjectSerialChanged: 17100.1 / Add new...
+    @Before
+    fun setup() {
+        Loged.FILTER_BY_CLASS_NAME = "com.example"
+        Loged.OTHER_CLASS_FILTER { !it.contains("Framing", true) }
+    }
+
+    data class EpisodeInfo(val name: String, val url: String)
+    data class ShowInformation(
+            val name: String = "",
+            val image: String = "",
+            val url: String = "",
+            val description: String = "",
+            val episodeList: List<EpisodeInfo> = emptyList(),
+            val genres: List<String> = emptyList()
+    )
+
+    data class ShowInfoCom(val name: String, val url: String)
+
+    data class FullShowInfo(val showInfoCom: ShowInfoCom, val showInformation: ShowInformation)
+
+    private fun getFullShowInfo(db: Database) = transaction(db) {
+        Shows.selectAll().map {
+            FullShowInfo(
+                    ShowInfoCom(it[Shows.name], it[Shows.url]),
+                    Episodes.select { Episodes.show eq it[Shows.id] }.map { ep ->
+                        ShowInformation(
+                                ep[Episodes.name],
+                                ep[Episodes.image],
+                                ep[Episodes.url],
+                                ep[Episodes.description],
+                                EpisodeLists.select { EpisodeLists.episode eq ep[Episodes.id] }
+                                    .map { EpisodeInfo(it[EpisodeLists.name], it[EpisodeLists.url]) }
+                        )
+                    }[0]
+            )
+        }.sortedBy { it.showInfoCom.name }
+    }
+
+    private fun getFullShowInfos(db: Database) = transaction(db) {
+        Episodes.selectAll().mapNotNull { ep ->
+            try {
+                ShowDBApi.ShowInformation(
+                        ep[Episodes.name],
+                        ep[Episodes.image],
+                        ep[Episodes.url],
+                        ep[Episodes.description],
+                        EpisodeLists.select { EpisodeLists.episode eq ep[Episodes.id] }
+                            .map { ShowDBApi.EpisodeInfo(it[EpisodeLists.name], it[EpisodeLists.url]) }
+                )
+            } catch (e: Exception) {
+                null
+            }
+        }.sortedBy { it.name }
+    }
 
     @Test
-    fun charthing() {
-        val word: (String) -> String = { it.split("-").map { it.toInt(16).toChar() }.joinToString("") }
-        val hex: (String) -> String = { it.toCharArray().map { it.toInt().toHexString() }.joinToString("-") }
-        val f = word("00-00-42-cc-0e-15-00-00-03-41-64-64-20-6e-65-77-2e-2e-2e")
-        prettyLog(f)
-        val f1 = word("00-00-42-cc-0e-15-00-00-03")
-        prettyLog(f1)
-        val f2 = word("41-64-64-20-6e-65-77-2e-2e-2e")
-        prettyLog(f2)
-        val f3 = hex(f2)
-        prettyLog(f3)
-        assertEquals("Add new...", f2, "These two should be equal")
-        assertEquals("41-64-64-20-6e-65-77-2e-2e-2e", f3, "These two should be equal")
-    }
-
-    private fun stringFun(s: String) {
-        val word: (String) -> String = { it.split("-").map { it.toIntOrNull(16)?.toChar() }.joinToString("") }
-        val hex: (String) -> String = { it.toCharArray().map { it.toInt().toHexString() }.joinToString("-") }
-        val f = word(s)
-        prettyLog(f)
-        val f3 = hex(s)
-        prettyLog(f3)
+    fun getApiTest() {
+        //val s = "http://arcane-fortress-22748.herokuapp.com/api/user/all.json"
+        val db = DbSettings.db
+        prettyLog(getFullShowInfos(db).toPrettyJson())
     }
 
     @Test
-    fun singing() {
-        stringFun("3928-38-00-00-42-cc-22-15-00-03-03-43-72-65-73-74-72-6f-6e-57-41-50-5f-45-59-49-4e-5f-63-6f-6c-69-6e-73-2d-74-70-6c-69-")
+    fun getApiTest2() {
+        //val s = "http://arcane-fortress-22748.herokuapp.com/api/user/all.json"
+        val db = DbSettings.db
+        val json = ShowDBApi(db, listOf()).getFullShowInfos()
+        val split = json.partition { it.url.contains("putlocker") }.let {
+            mapOf(
+                    "putlocker" to it.first
+            ) + it.second.partition { it.url.contains("gogoanime", true) }.let {
+                mapOf(
+                        "gogoanime" to it.first,
+                        "animetoon" to it.second
+                )
+            }
+        }
+        prettyLog("Total - ${json.size}\n${split.entries.joinToString("\n") { "${it.key} - ${it.value.size}" }}")
+        val shows = File("resources/database/allshows2.json")
+        shows.createNewFile()
+        val showList = mapOf("shows" to json)
+        shows.writeText(showList.toPrettyJson())
     }
+
+    data class ShowsInfo(val shows: List<ShowDBApi.ShowInformation>)
+
+    @Test
+    fun fromJsonStuff() {
+        val shows = Gson().fromJson<ShowsInfo>(File("resources/database/allshows2.json").readText(), ShowsInfo::class.java)
+        val split = shows.shows.partition { it.url.contains("putlocker") }.let {
+            mapOf(
+                    "putlocker" to it.first
+            ) + it.second.partition { it.url.contains("gogoanime", true) }.let {
+                mapOf(
+                        "gogoanime" to it.first,
+                        "animetoon" to it.second
+                )
+            }
+        }
+        prettyLog("Total - ${shows.shows.size}\n${split.entries.joinToString("\n") { "${it.key} - ${it.value.size}" }}")
+    }
+
+    @Test
+    fun fromJsonStuff2() {
+        val shows = Gson().fromJson<ShowsInfo>(File("resources/database/allshows2.json").readText(), ShowsInfo::class.java).shows
+        val split = shows.groupBy { ShowSource.getSourceType(it.url).name.toLowerCase() }
+        val mapped = split.entries.map { "${it.key} - ${it.value.size}" }
+        val m = mapped + "-".repeat(mapped.maxBy { it.length }!!.length) + "Total - ${shows.size}"
+        Loged.f(m)
+    }
+
+    @Test
+    fun fromJsonStuff3() {
+        val shows = Gson().fromJson<ShowsInfo>(File("resources/database/allshows2.json").readText(), ShowsInfo::class.java).shows
+        val split = shows.groupBy { ShowSource.getSourceType(it.url) }
+        val show = split[ShowSource.PUTLOCKER]!!.filter { it.episodeList.isNotEmpty() }.random()
+        val splitted = show.episodeList.groupBy { "Season \\d".toRegex().find(it.name)?.groupValues?.getOrElse(0) { "Season 1" } ?: "Season 1" }
+        val mapped = splitted.entries.map { "${it.key} - ${it.value.size}" }
+        Loged.f(mapped, show.name)
+        Loged.f(show)
+    }
+
+    @Test
+    fun fromJsonStuff4() {
+        fromJsonStuff2()
+        //val shows = Gson().fromJson<ShowsInfo>(File("resources/database/allshows2.json").readText(), ShowsInfo::class.java).shows
+        //    .filter { it.episodeList.isNotEmpty() }
+        val showsonly = File("resources/database/showsonly.json")
+        val shows = Gson().fromJson<List<ShowInfo>>(showsonly.readText(), object : TypeToken<List<ShowInfo>>() {}.type)
+            .filter { it.type == ShowType.SHOW }
+            .mapNotNull {
+                try {
+                    EpisodeApi(it)
+                } catch (e: Exception) {
+                    null
+                }
+            }
+            .map {
+                it.map {
+                    ShowDBApi.ShowInformation(
+                            name,
+                            image,
+                            source.url,
+                            description,
+                            episodeList.map { ShowDBApi.EpisodeInfo(it.name, it.url) },
+                            genres
+                    )
+                }
+            }
+        val showing = File("resources/database/episodesonly.json")
+        showing.createNewFile()
+        showing.writeText(shows.toPrettyJson())
+        /*for(i in shows) {
+            val seasons = i.episodeList.groupBy { "Season \\d".toRegex().find(it.name)?.groupValues?.getOrElse(0) { "Season 1" } ?: "Season 1" }
+            val mapped = seasons.entries.map { "${it.key} - ${it.value.size}" }
+            Loged.f(mapped, i.name, ShowSource.getSourceType(i.url).name)
+        }*/
+        /*for (i in shows) {
+            Loged.f(i, i.name, ShowSource.getSourceType(i.url).name, showSeasons = true)
+        }*/
+        /*val split = shows.groupBy { ShowSource.getSourceType(it.url) }
+        val show = split[ShowSource.PUTLOCKER]!!.filter { it.episodeList.isNotEmpty() }.random()
+        val splitted = show.episodeList.groupBy { "Season \\d".toRegex().find(it.name)?.groupValues?.getOrElse(0) { "Season 1" } ?: "Season 1" }
+        val mapped = splitted.entries.map { "${it.key} - ${it.value.size}" }
+        Loged.f(mapped, show.name)
+        Loged.f(show)*/
+        /*val s = shows.map { it.frame(true) }
+        val file = File("resources/database/niceLookingShows.txt")
+        file.writeText(s.joinToString("\n\n"))*/
+        /*val s = shows.map { it!!.frame(true) }
+        val file = File("resources/database/niceLookingShowsTwo.txt")
+        file.writeText(s.joinToString("\n\n"))*/
+    }
+
+    fun Loged.f(
+            msg: ShowDBApi.ShowInformation, tag: String = msg.name, infoText: String = TAG,
+            showPretty: Boolean = SHOW_PRETTY, threadName: Boolean = WITH_THREAD_NAME, showSeasons: Boolean = true
+    ) = f(listOf(
+            "Name: ${msg.name}",
+            "Url: ${msg.url}",
+            "Image: ${msg.image}",
+            "Genres: ${msg.genres.joinToString(", ") { it }}",
+            "Description: ${msg.description.replace("\n", " ")}",
+            "Episodes:",
+            *msg.let {
+                if (showSeasons) {
+                    it.episodeList.groupBy { "Season \\d".toRegex().find(it.name)?.groupValues?.getOrElse(0) { "Season 1" } ?: "Season 1" }.map {
+                        listOf(listOf("      ${it.key}"), it.value.map { "            $it" }).flatten()
+                    }.flatten()
+                } else {
+                    it.episodeList.map { "      $it" }
+                }
+            }.toTypedArray()
+    ), tag, infoText, showPretty, threadName)
+
+    fun ShowDBApi.ShowInformation.frame(showSeasons: Boolean = true) = listOf(
+            "Name: $name",
+            "Url: $url",
+            "Image: $image",
+            "Genres: ${genres.joinToString(", ") { it }}",
+            "Description: ${description.replace("\n", " ")}",
+            "Episodes:",
+            *this.let {
+                if (showSeasons) {
+                    it.episodeList.groupBy { "Season \\d".toRegex().find(it.name)?.groupValues?.getOrElse(0) { "Season 1" } ?: "Season 1" }.map {
+                        listOf(listOf("      ${it.key}"), it.value.map { "            $it" }).flatten()
+                    }.flatten()
+                } else {
+                    it.episodeList.map { "      $it" }
+                }
+            }.toTypedArray()
+    ).frame(FrameType.BOX.apply {
+        frame.top = this@frame.name
+    })
 
     private fun List<ShowInfo>.randomShow(): EpisodeApi = EpisodeApi(random())
 
@@ -565,7 +750,8 @@ class ApplicationTest {
     ): String {
         val fullLength = mutableListOf(top, bottom).apply { addAll(this@frame.map(transform)) }.maxBy { it.length }!!.length + 2
         val space: (String) -> String = { " ".repeat(fullLength - it.length - 1) }
-        val mid = joinToString(separator = "\n") { "$left${if (rtl) space(transform(it)) else " "}$it${if (rtl) " " else space(transform(it))}$right" }
+        val mid =
+            joinToString(separator = "\n") { "$left${if (rtl) space(transform(it)) else " "}$it${if (rtl) " " else space(transform(it))}$right" }
         val space2: (String, Boolean) -> String = { spacing, b -> (if (b) topFillIn else bottomFillIn).repeat((fullLength - spacing.length) / 2) }
         val topBottomText: (String, Boolean) -> String = { s, b ->
             if (s.length == 1) s.repeat(fullLength)
@@ -680,6 +866,25 @@ class ApplicationTest {
                 }
             }
         prettyLog(html)
+    }
+
+    @Test
+    fun dslExample() {
+
+        val html = createHTML(prettyPrint = true).html {
+            body {
+                +"Hello World"
+            }
+        }
+
+        println(html)
+
+        /*
+        <html>
+            <body>Hello World</body>
+        </html>
+        */
+
     }
 
     @Test

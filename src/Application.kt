@@ -60,6 +60,9 @@ import kotlin.time.hours
 
 
 fun main() {
+    Loged.FILTER_BY_CLASS_NAME = "com.example"
+    Loged.WITH_THREAD_NAME = false
+    Loged.OTHER_CLASS_FILTER { it.contains("Framing", true) }
     System.setProperty("https.protocols", "TLSv1.2,TLSv1.1,SSLv3")
     val env = applicationEngineEnvironment {
         module {
@@ -85,15 +88,15 @@ fun main() {
 }
 
 data class FirebaseEpisode(
-    val name: String? = null,
-    val url: String? = null
+        val name: String? = null,
+        val url: String? = null
 )
 
 data class FirebaseShow(
-    val name: String? = null,
-    val url: String? = null,
-    var showNum: Int = 0,
-    val episodeInfo: List<FirebaseEpisode>? = null
+        val name: String? = null,
+        val url: String? = null,
+        var showNum: Int = 0,
+        val episodeInfo: List<FirebaseEpisode>? = null
 )
 
 fun Application.firebase() {
@@ -159,8 +162,8 @@ fun Application.module() {
     if (file.exists()) {
         try {
             val list = Gson().fromJson<MutableList<ShowInfo>>(
-                file.readText(),
-                object : TypeToken<MutableList<ShowInfo>>() {}.type
+                    file.readText(),
+                    object : TypeToken<MutableList<ShowInfo>>() {}.type
             )
             shows.addAll(list)
         } catch (e: Exception) {
@@ -221,7 +224,19 @@ private fun Application.database(db: Database) {
         //createEverything(db, ShowApi.getSources(Source.ANIME, Source.DUBBED, Source.CARTOON, Source.CARTOON_MOVIES, Source.LIVE_ACTION))
         //createEverything(db, ShowApi.getSources(Source.CARTOON_MOVIES, Source.LIVE_ACTION_MOVIES))
         //createEverything(db, ShowApi.getEverything())
-        //updateShowStuff(db, ShowApi.getSources(Source.LIVE_ACTION_MOVIES))
+        //removeAllOfType(db, "putlocker")
+        /*val live = ShowApi.getSources(Source.LIVE_ACTION, Source.LIVE_ACTION_MOVIES)//.groupBy  { it.name[0] }
+        updateShowStuff(db, live)*/
+        /*val live = ShowApi.getSources(Source.LIVE_ACTION_MOVIES).sortedBy { it.name }
+            .let { it.drop(it.indexOfFirst { it.name[0].toString().equals("i", true) } - 1) }
+        updateShowStuff(db, live)*/
+        //down to I on movies
+        //live.values.multiRun { updateShowStuff(db, it) }
+        /*for(i in live.values) {
+            launch {
+                updateShowStuff(db, i)
+            }
+        }*/
         Notify.create()
             .title("Finished")
             .text("Finished getting sources")
@@ -341,7 +356,7 @@ private fun Application.routing(dbApi: ShowDBApi, simpleJwt: SimpleJWT) {
                 val episode: EpisodeApiInfo? = dbApi.getEpisodeInfo(name)
 
                 if (episode != null)
-                    /*call.respond(FreeMarkerContent("epview.ftl", mapOf("data" to episode)))*/
+                /*call.respond(FreeMarkerContent("epview.ftl", mapOf("data" to episode)))*/
                     call.respond(FreeMarkerContent("nicelookingshow.ftl", mapOf("data" to episode)))
                 else
                     notFound("Show not found")
@@ -381,14 +396,14 @@ private fun Application.routing(dbApi: ShowDBApi, simpleJwt: SimpleJWT) {
                     "get" -> {
                         getOrUpdateShows {
                             createEverything(
-                                dbApi.db,
-                                ShowApi.getSources(
-                                    Source.ANIME,
-                                    Source.DUBBED,
-                                    Source.CARTOON,
-                                    Source.CARTOON_MOVIES,
-                                    Source.LIVE_ACTION
-                                )
+                                    dbApi.db,
+                                    ShowApi.getSources(
+                                            Source.ANIME,
+                                            Source.DUBBED,
+                                            Source.CARTOON,
+                                            Source.CARTOON_MOVIES,
+                                            Source.LIVE_ACTION
+                                    )
                             )
                         }
                     }
@@ -432,10 +447,10 @@ private fun Application.routing(dbApi: ShowDBApi, simpleJwt: SimpleJWT) {
                     list = Show.all().sortedBy { it.name }
                 }
                 call.respond(
-                    FreeMarkerContent(
-                        "boottable.ftl",
-                        mapOf("data" to list)
-                    )
+                        FreeMarkerContent(
+                                "boottable.ftl",
+                                mapOf("data" to list)
+                        )
                 )
             }
         }
