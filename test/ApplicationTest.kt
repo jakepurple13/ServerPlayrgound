@@ -2,6 +2,7 @@ package com.example
 
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import io.ktor.application.Application
 import io.ktor.html.HtmlContent
 import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.runBlocking
@@ -14,6 +15,7 @@ import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.Before
 import java.io.File
 import kotlin.collections.set
+import kotlin.properties.Delegates
 import kotlin.random.Random
 import kotlin.reflect.KCallable
 import kotlin.reflect.full.memberFunctions
@@ -27,6 +29,221 @@ class ApplicationTest {
     fun setup() {
         Loged.FILTER_BY_CLASS_NAME = "com.example"
         Loged.OTHER_CLASS_FILTER { !it.contains("Framing", true) }
+    }
+
+    @Test
+    fun other() {
+        ClassInfo<Application>().printClassInfoInBox<String>()
+        val deck2 = Deck.DeckBuilder.buildDeck {
+            card(3, Suit.SPADES)
+            cards
+            card {
+                value = 3
+                suit = Suit.SPADES
+            }
+            cards(Deck[Suit.SPADES])
+            shuffle()
+        }
+        Loged.f(deck2)
+        val deck25 = Deck.DeckBuilder {
+            card(3, Suit.SPADES)
+            cards
+            card {
+                value = 3
+                suit = Suit.SPADES
+            }
+            cards(Deck[Suit.SPADES])
+            shuffle()
+        }
+        Loged.f(deck25)
+        val c = Deck[Suit.SPADES]
+        Loged.f(c)
+        val deck3 = Deck + Card(3, Suit.SPADES)
+        Loged.f(deck3)
+        val d = Deck.defaultDeck()
+        d.shuffle()
+        Loged.f(d)
+        Loged.f(d.draw())
+        d.addCard(d.draw())
+        val c1 = Card {
+            value = 3
+            suit = Suit.SPADES
+        }
+        val c2 = Card.cardBuilder {
+            value = 3
+            suit = Suit.SPADES
+        }
+    }
+
+    @Test
+    fun other2() {
+        val deck = Deck.defaultDeck()
+        deck.shuffle()
+        var playerWins = 0
+        var dealerWins = 0
+        var ties = 0
+        var count = 0
+        fun List<Card>.sumOfCards() = sumBy { it.valueTen }
+        fun List<Card>.cardToString() = joinToString(" + ") { "${it.valueTen}${it.suit.unicodeSymbol}" }
+        var playAgain = true
+        while (deck.isNotEmpty()) {
+            try {
+                val dealer = mutableListOf(deck.draw(), deck.draw())
+                val player = mutableListOf(deck.draw(), deck.draw())
+                fun printCurrentValues(msg: String = "") =
+                    println(msg +
+                            "Player: ${player.sumOfCards()} = (${player.cardToString()})" +
+                            " | " +
+                            "Dealer: ${dealer.sumOfCards()} = (${dealer.cardToString()})")
+                printCurrentValues("$count.\n")
+                while (player.sumOfCards() <= 16) {
+                    player += deck.draw()
+                    println("Player: ${player.sumOfCards()} (${player.cardToString()})")
+                }
+                while (dealer.sumOfCards() < 16 && player.sumOfCards() < 22) {
+                    dealer += deck.draw()
+                    println("Dealer: ${dealer.sumOfCards()} (${dealer.cardToString()})")
+                }
+                printCurrentValues()
+                val playerSum = player.sumOfCards()
+                val dealerSum = dealer.sumOfCards()
+                val end = when {
+                    playerSum in (dealerSum + 1)..21 || dealerSum > 21 -> "Player wins!".also { playerWins++ }
+                    dealerSum in (playerSum + 1)..21 || playerSum > 21 -> "Dealer wins!".also { dealerWins++ }
+                    playerSum == dealerSum -> "Pushed!".also { ties++ }
+                    playerSum > 21 && dealerSum > 21 -> "No one won.".also { ties++ }
+                    else -> null
+                }
+                println(end)
+                println("----------------------------------")
+            } catch (e: Exception) {
+                if (playAgain) {
+                    deck(Deck.defaultDeck())
+                    playAgain = false
+                }
+            } finally {
+                count++
+            }
+        }
+        Loged.f("Player won $playerWins time(s). Dealer won $dealerWins time(s). There was $ties tie(s). There were a total of ${--count} hands")
+    }
+
+    @DslMarker
+    annotation class DeckMarker
+
+    @DslMarker
+    annotation class CardMarker
+
+    data class Card(val value: Int, val suit: Suit) {
+        val valueTen: Int
+            get() = if (value > 10) 10 else value
+
+        @DeckMarker
+        class CardBuilder {
+            var value by Delegates.notNull<Int>()
+            var suit by Delegates.notNull<Suit>()
+        }
+
+        companion object {
+            @CardMarker
+            operator fun invoke(block: CardBuilder.() -> Unit) = CardBuilder().apply(block).let { Card(it.value, it.suit) }
+
+            @CardMarker
+            fun cardBuilder(block: CardBuilder.() -> Unit) = invoke(block)
+        }
+    }
+
+    enum class Suit(private val printableName: String, val symbol: String, val unicodeSymbol: String) {
+        HEARTS("Hearts", "H", "♥"), DIAMONDS("Diamonds", "D", "♦"), CLUBS("Clubs", "C", "♣"), SPADES("Spades", "S", "♠")
+    }
+
+    class Deck(vararg cards: Card) {
+        private val deckOfCards = mutableListOf(*cards)
+        fun addCard(vararg card: Card) = deckOfCards.addAll(card)
+        fun draw() = deckOfCards.removeAt(deckOfCards.lastIndex)
+        fun shuffle() = deckOfCards.shuffle()
+        fun isEmpty() = deckOfCards.isEmpty()
+        fun isNotEmpty() = deckOfCards.isNotEmpty()
+        override fun toString(): String = deckOfCards.toString()
+        operator fun invoke(deck: Deck) = deckOfCards.addAll(deck.deckOfCards)
+        operator fun invoke(vararg cards: Card) = deckOfCards.addAll(cards)
+
+        companion object {
+            fun defaultDeck() = Deck(*Suit.values().map { suit -> (1..13).map { value -> Card(value, suit) } }.flatten().toTypedArray())
+            operator fun get(suit: Suit) = Card(Random.nextInt(1, 13), suit)
+            operator fun get(vararg suit: Suit) = suit.map { Card(Random.nextInt(1, 13), it) }
+            operator fun get(num: Int) = Card(num, Suit.values().random())
+            operator fun get(vararg num: Int) = num.map { Card(it, Suit.values().random()) }
+            operator fun plus(card: Card) = Deck(card)
+        }
+
+        @DeckMarker
+        class DeckBuilder private constructor() {
+            private val cardList = mutableListOf<Card>()
+
+            @CardMarker
+            val cards: List<Card>
+                get() = cardList
+
+            @DeckMarker
+            fun card(block: Card.CardBuilder.() -> Unit) = Card.CardBuilder().apply(block).let { card(it.value, it.suit) }
+
+            @CardMarker
+            fun card(value: Int, suit: Suit) = cardList.add(Card(value, suit))
+
+            @CardMarker
+            fun cards(vararg cards: Card) = cardList.addAll(cards)
+
+            fun shuffle() = cardList.shuffle()
+            private fun build() = Deck(*cardList.toTypedArray())
+
+            companion object {
+                @DeckMarker
+                operator fun invoke(block: DeckBuilder.() -> Unit) = buildDeck(block)
+
+                @DeckMarker
+                fun buildDeck(block: DeckBuilder.() -> Unit) = DeckBuilder().apply(block).build()
+            }
+        }
+
+    }
+
+
+    object ScreenAction {
+        const val Profile = "Profile"
+        const val Account = "Account"
+    }
+
+    @Test
+    fun newKotlinStuff() {
+        //pascal().take(10).forEach(::println)
+        pascal(10, ::println)
+        val f = C3()
+        val f1 = ScreenAction.Profile
+        val f2 = when (f1) {
+            ScreenAction.Profile -> ""
+            ScreenAction.Account -> ""
+            else -> ""
+        }
+    }
+
+    private fun pascal(take: Int, action: (List<Int>) -> Unit) = generateSequence(listOf(1)) { prev ->
+        listOf(1) + (1..prev.lastIndex).map { prev[it - 1] + prev[it] } + listOf(1)
+    }.take(take).forEach(action)
+
+    interface C3 {
+        fun asdf() {
+
+        }
+
+        companion object {
+            operator fun invoke() = object : C3 {}
+        }
+    }
+
+    @Test
+    fun classInfoTest() {
+        ClassInfo<ApplicationTest>().printClassInfoInBox { it.toString().length }
     }
 
     data class EpisodeInfo(val name: String, val url: String)
